@@ -11,19 +11,22 @@ class NotificationsPage extends StatelessWidget {
       {
         'icon': Icons.library_music_rounded,
         'title': 'محاضرات جديدة',
-        'message': 'تمت إضافة محاضرات جديدة للشيخ د. محمد الأمين إسماعيل.',
+        'message':
+            'تمت إضافة محاضرات جديدة للشيخ أبو الحسن خوجلي إبراهيم.',
         'time': 'جديد',
       },
       {
         'icon': Icons.notifications_active_rounded,
         'title': 'مرحبًا بك',
-        'message': 'استمتع بالاستماع إلى مكتبة المحاضرات في أي وقت.',
+        'message':
+            'استمتع بالاستماع إلى مكتبة المحاضرات في أي وقت.',
         'time': 'اليوم',
       },
       {
         'icon': Icons.system_update_rounded,
         'title': 'تحديث التطبيق',
-        'message': 'تابع التحديثات القادمة لتحصل على المزيد من المميزات.',
+        'message':
+            'تابع التحديثات القادمة لتحصل على المزيد من المميزات.',
         'time': 'اليوم',
       },
     ];
