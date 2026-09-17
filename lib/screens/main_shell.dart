@@ -127,7 +127,7 @@ class _MiniPlayer extends StatefulWidget {
 
 class _MiniPlayerState extends State<_MiniPlayer>
     with SingleTickerProviderStateMixin {
-  static const Color _gold = Color(0xFFD6B56E);
+  static const Color _accent = Color(0xFF18C7DE);
 
   late final AnimationController _pulseController;
 
@@ -189,6 +189,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
     AudioPlayerService.instance.removeListener(
       _audioServiceChanged,
     );
+
     _pulseController.dispose();
     super.dispose();
   }
@@ -297,7 +298,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                   color: AppColors.cardDark,
                   border: Border(
                     top: BorderSide(
-                      color: _gold.withOpacity(
+                      color: _accent.withOpacity(
                         isPlaying ? borderOpacity : 0.25,
                       ),
                       width: borderWidth,
@@ -306,7 +307,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                   boxShadow: [
                     if (isPlaying)
                       BoxShadow(
-                        color: _gold.withOpacity(
+                        color: _accent.withOpacity(
                           0.04 + (pulse * 0.08),
                         ),
                         blurRadius: 5 + (pulse * 7),
@@ -332,7 +333,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                         child: Container(
                           height: 2,
                           decoration: BoxDecoration(
-                            color: _gold,
+                            color: _accent,
                             borderRadius:
                                 BorderRadius.circular(2),
                           ),
@@ -354,7 +355,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: _gold.withOpacity(
+                                color: _accent.withOpacity(
                                   isPlaying
                                       ? 0.45 + (pulse * 0.30)
                                       : 0.5,
@@ -366,7 +367,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                               boxShadow: isPlaying
                                   ? [
                                       BoxShadow(
-                                        color: _gold.withOpacity(
+                                        color: _accent.withOpacity(
                                           0.04 + (pulse * 0.08),
                                         ),
                                         blurRadius:
@@ -379,7 +380,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/sheikh.jpg',
+                                'assets/images/khogali.png',
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -422,7 +423,7 @@ class _MiniPlayerState extends State<_MiniPlayer>
                               audioService.isPlaying
                                   ? Icons.pause_circle_filled
                                   : Icons.play_circle_filled,
-                              color: _gold,
+                              color: _accent,
                               size: 32,
                             ),
                           ),
@@ -482,12 +483,12 @@ class _TopHeader extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(
                     color:
-                        _gold.withOpacity(0.4),
+                        _accent.withOpacity(0.4),
                   ),
                 ),
                 child: ClipOval(
                   child: Image.asset(
-                    'assets/images/sheikh.jpg',
+                    'assets/images/khogali.png',
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -498,7 +499,7 @@ class _TopHeader extends StatelessWidget {
                     CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'الشيخ د. محمد الأمين إسماعيل',
+                    'الشيخ أبو الحسن خوجلي إبراهيم',
                     style: GoogleFonts.tajawal(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -531,13 +532,13 @@ class _TopHeader extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: AppColors.cardDark,
                     border: Border.all(
-                      color: _gold.withOpacity(0.5),
+                      color: _accent.withOpacity(0.5),
                     ),
                   ),
                   child: const Icon(
                     Icons.notifications_rounded,
                     size: 16,
-                    color: _gold,
+                    color: _accent,
                   ),
                 ),
               ),
@@ -548,5 +549,5 @@ class _TopHeader extends StatelessWidget {
     );
   }
 
-  static const Color _gold = Color(0xFFD6B56E);
+  static const Color _accent = Color(0xFF18C7DE);
 }
