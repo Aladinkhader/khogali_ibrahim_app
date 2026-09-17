@@ -1,26 +1,122 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/lecture.dart';
 
 class ArchiveService {
-  static const Map<String, String> sections = {
-    '23-23-mp-3-160-k': 'برنامج ليتفقهوا',
-    '20260814_20260814_2109': 'مواعظ',
-    'mp-3-160-k_20260814': 'خطب الجمعة',
-    'mp-3-16_202609': 'فتاوي',
-    '19-.-m-4-a-128-k': 'برنامج ليدبروا',
-  };
+  static const String _siteBaseUrl = 'https://khogaliibrahim.com';
 
-  // تم رفع إصدار الـCache حتى يتم تجاهل البيانات القديمة
-  // وجلب الأقسام الجديدة (فتاوي + برنامج ليدبروا).
-  static const _cacheKey = 'lectures_cache_v2';
+  static const String _audioPageUrl =
+      'https://khogaliibrahim.com/%D8%A7%D9%84%D8%B5%D9%88%D8%AA%D9%8A%D8%A7%D8%AA/';
 
+  // سيتم استخدام هذا المفتاح لاحقًا من شاشة الأقسام.
+  // حاليًا نحتفظ به للتوافق مع الملفات القديمة.
+  static const Map<String, String> sections = {};
+
+  // إصدار جديد حتى لا تختلط بيانات الشيخ السابق
+  // مع بيانات الشيخ أبي الحسن خوجلي إبراهيم.
+  static const String _cacheKey = 'khogali_lectures_cache_v1';
+
+  static const Duration _requestTimeout = Duration(seconds: 20);
+
+  /// يجلب أقسام الصوتيات من الموقع الرسمي.
+  ///
+  /// المفتاح = رابط صفحة القسم
+  /// القيمة = اسم القسم
+  static Future<Map<String, String>> fetchSections({
+    bool forceRefresh = false,
+  }) async {
+    if (!forceRefresh) {
+      final cached = await _readSectionsCache();
+
+      if (cached != null && cached.isNotEmpty) {
+        _refreshSectionsInBackground();
+        return cached;
+      }
+    }
+
+    final fresh = await _fetchSectionsFromWebsite();
+
+    if (fresh.isEmpty) {
+      throw Exception('لم يتم العثور على الأقسام الصوتية في موقع الشيخ.');
+    }
+
+    await _writeSectionsCache(fresh);
+
+    return fresh;
+  }
+
+  static Future<void> _refreshSectionsInBackground() async {
+    try {
+      final fresh = await _fetchSectionsFromWebsite();
+
+      if (fresh.isNotEmpty) {
+        await _writeSectionsCache(fresh);
+      }
+    } catch (_) {}
+  }
+
+  /// يقرأ صفحة الصوتيات ويستخرج روابط صفحات السلاسل الصوتية.
+  static Future<Map<String, String>> _fetchSectionsFromWebsite() async {
+    final response = await http
+        .get(
+          Uri.parse(_audioPageUrl),
+          headers: const {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        )
+        .timeout(_requestTimeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('تعذر تحميل صفحة الصوتيات: HTTP ${response.statusCode}');
+    }
+
+    final html = utf8.decode(response.bodyBytes);
+
+    final Map<String, String> result = {};
+
+    // نبحث عن جميع روابط audio-category في الصفحة.
+    final linkRegex = RegExp(
+      r'''<a\b[^>]*href\s*=\s*["']([^"']*\/audio-category\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>''',
+      caseSensitive: false,
+    );
+
+    for (final match in linkRegex.allMatches(html)) {
+      final rawUrl = match.group(1) ?? '';
+      final rawTitle = match.group(2) ?? '';
+
+      final url = _normalizeUrl(rawUrl);
+
+      if (url.isEmpty) {
+        continue;
+      }
+
+      final title = _cleanHtmlText(rawTitle);
+
+      if (title.isEmpty) {
+        continue;
+      }
+
+      if (!_isUsefulSectionTitle(title)) {
+        continue;
+      }
+
+      result[url] = _cleanSectionTitle(title);
+    }
+
+    return result;
+  }
+
+  /// يجلب جميع المحاضرات الموجودة في جميع الأقسام.
   static Future<List<Lecture>> fetchAllLectures({
     bool forceRefresh = false,
   }) async {
     if (!forceRefresh) {
       final cached = await _readCache();
+
       if (cached != null && cached.isNotEmpty) {
         _refreshCacheInBackground();
         return cached;
@@ -28,77 +124,121 @@ class ArchiveService {
     }
 
     final fresh = await _fetchFromNetwork();
+
+    if (fresh.isEmpty) {
+      throw Exception('لم يتم العثور على أي محاضرات.');
+    }
+
     await _writeCache(fresh);
+
     return fresh;
   }
 
   static Future<void> _refreshCacheInBackground() async {
     try {
       final fresh = await _fetchFromNetwork();
-      await _writeCache(fresh);
+
+      if (fresh.isNotEmpty) {
+        await _writeCache(fresh);
+      }
     } catch (_) {}
   }
 
   static Future<List<Lecture>> _fetchFromNetwork() async {
+    final sectionsMap = await fetchSections();
+
     final List<Lecture> all = [];
     final List<String> errors = [];
 
-    for (final entry in sections.entries) {
+    for (final entry in sectionsMap.entries) {
       try {
-        final sectionLectures = await fetchSectionLectures(
+        final lectures = await fetchSectionLectures(
           entry.key,
           entry.value,
         );
-        all.addAll(sectionLectures);
+
+        all.addAll(lectures);
       } catch (e) {
         errors.add('${entry.value}: $e');
       }
     }
 
-    if (all.isEmpty) {
+    if (all.isEmpty && errors.isNotEmpty) {
       throw Exception(errors.join(' | '));
     }
 
     return all;
   }
 
+  /// يجلب محاضرات قسم واحد من صفحة القسم في موقع الشيخ.
+  ///
+  /// identifier هنا هو رابط صفحة القسم نفسه.
   static Future<List<Lecture>> fetchSectionLectures(
     String identifier,
     String sectionTitle,
   ) async {
-    final url = Uri.parse('https://archive.org/metadata/$identifier');
-    final response =
-        await http.get(url).timeout(const Duration(seconds: 15));
+    final url = _normalizeUrl(identifier);
 
-    if (response.statusCode != 200) {
-      throw Exception('HTTP ${response.statusCode}');
+    if (url.isEmpty) {
+      throw Exception('رابط القسم غير صالح.');
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final files = data['files'] as List<dynamic>? ?? [];
-    final lectures = <Lecture>[];
+    final response = await http
+        .get(
+          Uri.parse(url),
+          headers: const {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'text/html,application/xhtml+xml',
+          },
+        )
+        .timeout(_requestTimeout);
 
-    for (final file in files) {
-      final name = file['name'] as String? ?? '';
-      final lowerName = name.toLowerCase();
+    if (response.statusCode != 200) {
+      throw Exception(
+        'تعذر تحميل قسم "$sectionTitle": HTTP ${response.statusCode}',
+      );
+    }
 
-      if (!lowerName.endsWith('.mp3') && !lowerName.endsWith('.m4a')) {
+    final html = utf8.decode(response.bodyBytes);
+
+    final List<Lecture> lectures = [];
+
+    // الموقع يضع روابط التحميل الفعلية للصوتيات على Archive.org.
+    final archiveRegex = RegExp(
+      r'''(?:https?:)?\/\/(?:www\.)?archive\.org\/download\/[^"'\s<>]+''',
+      caseSensitive: false,
+    );
+
+    final Set<String> foundUrls = {};
+
+    for (final match in archiveRegex.allMatches(html)) {
+      var audioUrl = match.group(0) ?? '';
+
+      audioUrl = audioUrl.replaceAll('&amp;', '&');
+
+      if (audioUrl.startsWith('//')) {
+        audioUrl = 'https:$audioUrl';
+      }
+
+      if (!_isAudioUrl(audioUrl)) {
         continue;
       }
 
-      final rawTitle = name.substring(0, name.length - 4);
+      if (!foundUrls.add(audioUrl)) {
+        continue;
+      }
 
-      final displayTitle =
-          sectionTitle == 'فتاوي' ? _cleanFatawaTitle(rawTitle) : rawTitle;
+      final fileName = _extractFileName(audioUrl);
 
-      final audioUrl = Uri.https(
-        'archive.org',
-        '/download/$identifier/$name',
-      ).toString();
+      if (fileName.isEmpty) {
+        continue;
+      }
+
+      final title = _buildLectureTitle(fileName);
 
       lectures.add(
         Lecture(
-          title: displayTitle,
+          title: title,
           section: sectionTitle,
           audioUrl: audioUrl,
           identifier: identifier,
@@ -106,85 +246,238 @@ class ArchiveService {
       );
     }
 
-    // نرتب حسب رقم الحلقة المستخرج من الاسم الأصلي
-    // (البرومو أولًا، ثم تصاعديًا)
-    lectures.sort((a, b) {
-      final numA = _extractEpisodeNumber(a.title);
-      final numB = _extractEpisodeNumber(b.title);
-
-      if (numA != null && numB != null) {
-        return numA.compareTo(numB);
-      }
-
-      if (numA != null) return -1;
-      if (numB != null) return 1;
-
-      return a.title.compareTo(b.title);
-    });
+    _sortLectures(lectures);
 
     return lectures;
   }
 
-  /// يستخرج رقم الحلقة
-  /// البرومو يعتبر صفر عشان يطلع أول واحد
-  static int? _extractEpisodeNumber(String title) {
-    if (title.contains('برومو')) return 0;
+  /// ينشئ اسمًا نظيفًا للمحاضرة من اسم الملف الموجود في Archive.org.
+  ///
+  /// أمثلة:
+  /// 1.mp3      -> الدرس 1
+  /// 2.mp3      -> الدرس 2
+  /// 10.mp3     -> الدرس 10
+  /// lecture.mp3 -> lecture
+  static String _buildLectureTitle(String fileName) {
+    var name = fileName;
 
+    final extensionIndex = name.lastIndexOf('.');
+
+    if (extensionIndex > 0) {
+      name = name.substring(0, extensionIndex);
+    }
+
+    name = Uri.decodeComponent(name).trim();
+
+    final numberMatch = RegExp(r'^\s*(\d+)\s*$').firstMatch(name);
+
+    if (numberMatch != null) {
+      return 'الدرس ${numberMatch.group(1)}';
+    }
+
+    final arabicNumberMatch =
+        RegExp(r'^\s*الدرس[\s_-]*(\d+)\s*$', caseSensitive: false)
+            .firstMatch(name);
+
+    if (arabicNumberMatch != null) {
+      return 'الدرس ${arabicNumberMatch.group(1)}';
+    }
+
+    name = name
+        .replaceAll('_', ' ')
+        .replaceAll('-', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    return name.isEmpty ? fileName : name;
+  }
+
+  /// ترتيب الدروس رقميًا.
+  static void _sortLectures(List<Lecture> lectures) {
+    lectures.sort((a, b) {
+      final numberA = _extractEpisodeNumber(a.title);
+      final numberB = _extractEpisodeNumber(b.title);
+
+      if (numberA != null && numberB != null) {
+        return numberA.compareTo(numberB);
+      }
+
+      if (numberA != null) {
+        return -1;
+      }
+
+      if (numberB != null) {
+        return 1;
+      }
+
+      return a.title.compareTo(b.title);
+    });
+  }
+
+  static int? _extractEpisodeNumber(String title) {
     final match = RegExp(r'\d+').firstMatch(title);
 
-    if (match == null) return null;
+    if (match == null) {
+      return null;
+    }
 
     return int.tryParse(match.group(0)!);
   }
 
-  /// ينظف عناوين الفتاوى:
-  /// يشيل اسم الشيخ والفواصل والأرقام الزائدة بالآخر
-  static String _cleanFatawaTitle(String raw) {
-    var t = raw;
+  /// ينظف اسم القسم القادم من HTML.
+  static String _cleanSectionTitle(String title) {
+    var result = title;
 
-    final namePatterns = [
-      RegExp(r'الشيخ\s*الدكتور\s*محمد\s*الأمين\s*إسماعيل'),
-      RegExp(r'الشيخ\s*د\.?\s*محمد\s*الأمين\s*إسماعيل'),
-      RegExp(r'د\.?\s*محمد\s*الأمين\s*إسماعيل'),
-      RegExp(r'محمد\s*الأمين\s*إسماعيل'),
-      RegExp(r'برنامج\s*إفادة\s*السائلين'),
-    ];
+    result = result
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll('  ', ' ')
+        .trim();
 
-    for (final p in namePatterns) {
-      t = t.replaceAll(p, '');
+    // إزالة السنة الهجرية من نهاية الاسم مع الإبقاء على اسم السلسلة نظيفًا.
+    result = result.replaceAll(
+      RegExp(r'\s*[-–—]?\s*144[0-9]\s*هـ?\s*$', caseSensitive: false),
+      '',
+    );
+
+    result = result.replaceAll(
+      RegExp(r'\s*[-–—]?\s*\d{3,4}\s*هـ?\s*$', caseSensitive: false),
+      '',
+    );
+
+    return result.trim();
+  }
+
+  static bool _isUsefulSectionTitle(String title) {
+    final normalized = title.trim();
+
+    if (normalized.isEmpty) {
+      return false;
     }
 
-    t = t.replaceAll('||', ' ');
-    t = t.replaceAll('|', ' ');
-    t = t.replaceAll('🔹', ' ');
-    t = t.replaceAll('__', ' ');
-    t = t.replaceAll(RegExp(r'\bI\b'), ' ');
-    t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final ignoredTitles = {
+      'تحميل الكل',
+      'تحميل',
+      'المزيد',
+      'التالي',
+      'السابق',
+      'الصوتيات',
+    };
 
-    // إزالة أي أرقام زائدة بآخر العنوان
-    // زي "؟2" أو "3"
-    t = t.replaceAll(RegExp(r'\d+$'), '').trim();
+    return !ignoredTitles.contains(normalized);
+  }
 
-    return t.isEmpty ? raw : t;
+  /// يحول الروابط النسبية إلى روابط كاملة.
+  static String _normalizeUrl(String url) {
+    var value = url.trim();
+
+    if (value.isEmpty) {
+      return '';
+    }
+
+    value = value.replaceAll('&amp;', '&');
+
+    if (value.startsWith('//')) {
+      return 'https:$value';
+    }
+
+    if (value.startsWith('/')) {
+      return '$_siteBaseUrl$value';
+    }
+
+    if (value.startsWith('http://')) {
+      return value.replaceFirst('http://', 'https://');
+    }
+
+    if (value.startsWith('https://')) {
+      return value;
+    }
+
+    return '$_siteBaseUrl/${value.replaceFirst(RegExp(r'^/+'), '')}';
+  }
+
+  static String _cleanHtmlText(String value) {
+    var text = value;
+
+    text = text.replaceAll(
+      RegExp(r'<script[\s\S]*?<\/script>', caseSensitive: false),
+      ' ',
+    );
+
+    text = text.replaceAll(
+      RegExp(r'<style[\s\S]*?<\/style>', caseSensitive: false),
+      ' ',
+    );
+
+    text = text.replaceAll(RegExp(r'<[^>]+>'), ' ');
+
+    text = text
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#039;', "'")
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+
+    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    return text;
+  }
+
+  static bool _isAudioUrl(String url) {
+    final lower = url.toLowerCase();
+
+    return lower.endsWith('.mp3') ||
+        lower.contains('.mp3?') ||
+        lower.endsWith('.m4a') ||
+        lower.contains('.m4a?') ||
+        lower.endsWith('.ogg') ||
+        lower.contains('.ogg?');
+  }
+
+  static String _extractFileName(String url) {
+    try {
+      final uri = Uri.parse(url);
+
+      if (uri.pathSegments.isEmpty) {
+        return '';
+      }
+
+      return Uri.decodeComponent(uri.pathSegments.last);
+    } catch (_) {
+      return '';
+    }
   }
 
   static Future<List<Lecture>?> _readCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
       final raw = prefs.getString(_cacheKey);
 
-      if (raw == null) return null;
+      if (raw == null || raw.isEmpty) {
+        return null;
+      }
 
-      final list = jsonDecode(raw) as List<dynamic>;
+      final decoded = jsonDecode(raw);
 
-      return list
+      if (decoded is! List) {
+        return null;
+      }
+
+      return decoded
+          .whereType<Map>()
           .map(
             (item) => Lecture(
-              title: item['title'] as String,
-              section: item['section'] as String,
-              audioUrl: item['audioUrl'] as String,
-              identifier: item['identifier'] as String,
+              title: item['title']?.toString() ?? '',
+              section: item['section']?.toString() ?? '',
+              audioUrl: item['audioUrl']?.toString() ?? '',
+              identifier: item['identifier']?.toString() ?? '',
             ),
+          )
+          .where(
+            (lecture) =>
+                lecture.title.isNotEmpty && lecture.audioUrl.isNotEmpty,
           )
           .toList();
     } catch (_) {
@@ -213,16 +506,56 @@ class ArchiveService {
     } catch (_) {}
   }
 
-  /// يجيب تشكيلة متنوعة ومتداخلة:
-  /// عدد مخصص من كل قسم، بترتيب ممزوج بينهم
+  static Future<Map<String, String>?> _readSectionsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final raw = prefs.getString('${_cacheKey}_sections');
+
+      if (raw == null || raw.isEmpty) {
+        return null;
+      }
+
+      final decoded = jsonDecode(raw);
+
+      if (decoded is! Map) {
+        return null;
+      }
+
+      return decoded.map(
+        (key, value) => MapEntry(
+          key.toString(),
+          value.toString(),
+        ),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _writeSectionsCache(
+    Map<String, String> sectionsMap,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setString(
+        '${_cacheKey}_sections',
+        jsonEncode(sectionsMap),
+      );
+    } catch (_) {}
+  }
+
+  /// يرجع تشكيلة من المحاضرات لواجهة الرئيسية.
+  ///
+  /// يتم اختيار عدد محدود من أول الدروس من الأقسام المتاحة
+  /// ثم خلطها بالتناوب.
   static Future<List<Lecture>> fetchFeaturedMix() async {
     final all = await fetchAllLectures();
 
-    final Map<String, int> countPerSection = {
-      'برنامج ليتفقهوا': 4,
-      'مواعظ': 3,
-      'خطب الجمعة': 3,
-    };
+    if (all.isEmpty) {
+      return [];
+    }
 
     final Map<String, List<Lecture>> bySection = {};
 
@@ -230,12 +563,21 @@ class ArchiveService {
       bySection.putIfAbsent(lecture.section, () => []).add(lecture);
     }
 
-    final Map<String, List<Lecture>> picked = {};
+    final List<List<Lecture>> selectedLists = [];
 
-    countPerSection.forEach((section, count) {
-      final list = bySection[section] ?? [];
-      picked[section] = list.take(count).toList();
-    });
+    for (final entry in bySection.entries) {
+      final list = entry.value;
+
+      if (list.isEmpty) {
+        continue;
+      }
+
+      selectedLists.add(list.take(3).toList());
+
+      if (selectedLists.length >= 6) {
+        break;
+      }
+    }
 
     final List<Lecture> mix = [];
 
@@ -245,9 +587,7 @@ class ArchiveService {
     while (addedAny) {
       addedAny = false;
 
-      for (final section in countPerSection.keys) {
-        final list = picked[section]!;
-
+      for (final list in selectedLists) {
         if (index < list.length) {
           mix.add(list[index]);
           addedAny = true;
@@ -262,6 +602,8 @@ class ArchiveService {
 
   static Future<void> clearCache() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove(_cacheKey);
+    await prefs.remove('${_cacheKey}_sections');
   }
 }
