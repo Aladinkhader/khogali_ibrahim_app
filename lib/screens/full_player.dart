@@ -25,7 +25,8 @@ class _FullPlayerScreenState
   bool _checkingAvailability = true;
   bool _blocked = false;
 
-  static const Color _gold = Color(0xFFD6B56E);
+  static const Color _accent =
+      Color(0xFF18C7DE);
 
   @override
   void initState() {
@@ -36,7 +37,8 @@ class _FullPlayerScreenState
     _refreshTimer = Timer.periodic(
       const Duration(milliseconds: 300),
       (_) {
-        if (mounted && !_checkingAvailability) {
+        if (mounted &&
+            !_checkingAvailability) {
           setState(() {});
         }
       },
@@ -68,7 +70,9 @@ class _FullPlayerScreenState
     }
 
     final canPlay =
-        await audioService.canPlayLecture(lecture);
+        await audioService.canPlayLecture(
+      lecture,
+    );
 
     if (!mounted) return;
 
@@ -101,10 +105,13 @@ class _FullPlayerScreenState
       barrierDismissible: false,
       builder: (dialogContext) {
         return Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection:
+              TextDirection.rtl,
           child: AlertDialog(
-            backgroundColor: AppColors.cardDark,
-            shape: RoundedRectangleBorder(
+            backgroundColor:
+                AppColors.cardDark,
+            shape:
+                RoundedRectangleBorder(
               borderRadius:
                   BorderRadius.circular(20),
             ),
@@ -113,37 +120,43 @@ class _FullPlayerScreenState
               height: 58,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primaryTeal
-                    .withOpacity(0.12),
+                color: _accent.withOpacity(0.12),
                 border: Border.all(
-                  color: AppColors.primaryTeal
-                      .withOpacity(0.35),
+                  color:
+                      _accent.withOpacity(0.35),
                 ),
               ),
               child: const Icon(
                 Icons.wifi_off_rounded,
-                color: AppColors.primaryTeal,
+                color: _accent,
                 size: 28,
               ),
             ),
             title: Text(
               'المحاضرة غير متاحة حاليًا',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.tajawal(
+              textAlign:
+                  TextAlign.center,
+              style:
+                  GoogleFonts.tajawal(
                 fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppColors.mainText,
+                fontWeight:
+                    FontWeight.bold,
+                color:
+                    AppColors.mainText,
               ),
             ),
             content: Text(
               'للاستماع إليها الآن، اتصل بالإنترنت. '
               'ويمكنك تنزيل المحاضرة مسبقًا للاستماع إليها '
               'لاحقًا دون الحاجة إلى اتصال.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.tajawal(
+              textAlign:
+                  TextAlign.center,
+              style:
+                  GoogleFonts.tajawal(
                 fontSize: 12,
                 height: 1.8,
-                color: AppColors.secondaryText,
+                color:
+                    AppColors.secondaryText,
               ),
             ),
             actionsAlignment:
@@ -153,28 +166,36 @@ class _FullPlayerScreenState
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () =>
-                      Navigator.of(dialogContext).pop(),
-                  style: ElevatedButton.styleFrom(
+                      Navigator.of(
+                    dialogContext,
+                  ).pop(),
+                  style:
+                      ElevatedButton.styleFrom(
                     backgroundColor:
-                        AppColors.primaryTeal,
+                        _accent,
                     foregroundColor:
                         AppColors.background,
                     elevation: 0,
                     padding:
-                        const EdgeInsets.symmetric(
+                        const EdgeInsets
+                            .symmetric(
                       vertical: 12,
                     ),
                     shape:
                         RoundedRectangleBorder(
                       borderRadius:
-                          BorderRadius.circular(12),
+                          BorderRadius.circular(
+                        12,
+                      ),
                     ),
                   ),
                   child: Text(
                     'حسنًا',
-                    style: GoogleFonts.tajawal(
+                    style:
+                        GoogleFonts.tajawal(
                       fontSize: 13,
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
                     ),
                   ),
                 ),
@@ -192,31 +213,48 @@ class _FullPlayerScreenState
     super.dispose();
   }
 
-  String _formatDuration(Duration d) {
+  String _formatDuration(
+    Duration d,
+  ) {
+    final hours =
+        d.inHours;
+
     final minutes =
-        d.inMinutes.remainder(60)
+        d.inMinutes
+            .remainder(60)
             .toString()
             .padLeft(2, '0');
 
     final seconds =
-        d.inSeconds.remainder(60)
+        d.inSeconds
+            .remainder(60)
             .toString()
             .padLeft(2, '0');
+
+    if (hours > 0) {
+      return '$hours:$minutes:$seconds';
+    }
 
     return '$minutes:$seconds';
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     if (_checkingAvailability ||
         _blocked) {
       return Directionality(
-        textDirection: TextDirection.rtl,
+        textDirection:
+            TextDirection.rtl,
         child: Scaffold(
           backgroundColor:
               AppColors.background,
           body: const Center(
-            child: CircularProgressIndicator(),
+            child:
+                CircularProgressIndicator(
+              color: _accent,
+            ),
           ),
         ),
       );
@@ -229,10 +267,12 @@ class _FullPlayerScreenState
         audioService.currentLecture;
 
     final durationMs =
-        audioService.duration.inMilliseconds;
+        audioService.duration
+            .inMilliseconds;
 
     final positionMs =
-        audioService.position.inMilliseconds;
+        audioService.position
+            .inMilliseconds;
 
     final livePercent =
         durationMs > 0
@@ -246,7 +286,8 @@ class _FullPlayerScreenState
             : livePercent;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection:
+          TextDirection.rtl,
       child: Scaffold(
         backgroundColor:
             AppColors.background,
@@ -259,16 +300,34 @@ class _FullPlayerScreenState
             ),
             child: Column(
               children: [
+                // زر الرجوع
                 Row(
                   children: [
-                    IconButton(
-                      onPressed: () =>
-                          Navigator.of(context)
-                              .pop(),
-                      icon: const Icon(
-                        Icons.arrow_forward_ios,
-                        color: _gold,
-                        size: 18,
+                    Container(
+                      decoration:
+                          BoxDecoration(
+                        shape:
+                            BoxShape.circle,
+                        color: AppColors.cardDark
+                            .withOpacity(0.75),
+                        border: Border.all(
+                          color: _accent
+                              .withOpacity(
+                            0.25,
+                          ),
+                        ),
+                      ),
+                      child: IconButton(
+                        onPressed: () =>
+                            Navigator.of(
+                          context,
+                        ).pop(),
+                        icon: const Icon(
+                          Icons
+                              .arrow_forward_ios_rounded,
+                          color: _accent,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
@@ -276,12 +335,15 @@ class _FullPlayerScreenState
 
                 const Spacer(),
 
+                // صورة الشيخ + دائرة التقدم
                 GestureDetector(
                   onPanStart: (_) =>
                       setState(
-                    () => _seeking = true,
+                    () =>
+                        _seeking = true,
                   ),
-                  onPanUpdate: (details) {
+                  onPanUpdate:
+                      (details) {
                     _updateSeekFromDrag(
                       details.localPosition,
                     );
@@ -299,64 +361,99 @@ class _FullPlayerScreenState
                     }
 
                     setState(
-                      () => _seeking = false,
+                      () =>
+                          _seeking = false,
                     );
                   },
                   child:
                       CircularPercentIndicator(
                     radius: 115,
                     lineWidth: 6,
-                    percent: displayPercent,
+                    percent:
+                        displayPercent,
                     circularStrokeCap:
-                        CircularStrokeCap.round,
+                        CircularStrokeCap
+                            .round,
+
+                    // لون المسار الخلفي
                     backgroundColor:
                         AppColors.cardDark,
-                    progressColor: _gold,
+
+                    // لون التقدم
+                    progressColor:
+                        _accent,
+
                     animation: false,
+
                     center: Container(
                       width: 200,
                       height: 200,
                       padding:
-                          const EdgeInsets.all(8),
+                          const EdgeInsets.all(
+                        8,
+                      ),
                       decoration:
                           BoxDecoration(
                         shape:
                             BoxShape.circle,
+
+                        // خلفية الصورة
                         color:
                             AppColors.cardDark,
+
+                        // إطار سماوي
                         border:
                             Border.all(
-                          color: _gold
-                              .withOpacity(0.7),
+                          color: _accent
+                              .withOpacity(
+                            0.75,
+                          ),
                           width: 3,
                         ),
+
+                        // توهج سماوي
                         boxShadow: [
                           BoxShadow(
-                            color: _gold
+                            color: _accent
                                 .withOpacity(
-                              0.18,
+                              0.20,
                             ),
-                            blurRadius: 28,
+                            blurRadius: 30,
+                            spreadRadius: 2,
                             offset:
                                 const Offset(
                               0,
-                              12,
+                              10,
                             ),
+                          ),
+                          BoxShadow(
+                            color: _accent
+                                .withOpacity(
+                              0.08,
+                            ),
+                            blurRadius: 50,
                           ),
                         ],
                       ),
+
+                      // صورة الشيخ
                       child: ClipOval(
-                        child: Image.asset(
+                        child:
+                            Image.asset(
                           'assets/images/sheikh.jpg',
-                          fit: BoxFit.cover,
+                          fit:
+                              BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(
+                  height: 28,
+                ),
 
+                // اسم المحاضرة
                 Text(
                   lecture?.title ?? '',
                   textAlign:
@@ -366,7 +463,7 @@ class _FullPlayerScreenState
                       TextOverflow.ellipsis,
                   style:
                       GoogleFonts.tajawal(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight:
                         FontWeight.bold,
                     color:
@@ -374,33 +471,43 @@ class _FullPlayerScreenState
                   ),
                 ),
 
-                const SizedBox(height: 6),
+                const SizedBox(
+                  height: 7,
+                ),
 
+                // اسم القسم
                 Text(
                   lecture?.section ?? '',
+                  textAlign:
+                      TextAlign.center,
+                  maxLines: 1,
+                  overflow:
+                      TextOverflow.ellipsis,
                   style:
                       GoogleFonts.tajawal(
-                    fontSize: 12,
+                    fontSize: 13,
                     color:
-                        AppColors
-                            .secondaryText,
+                        AppColors.secondaryText,
                   ),
                 ),
 
                 const Spacer(),
 
+                // شريط التقدم
                 SliderTheme(
                   data:
-                      SliderTheme.of(context)
-                          .copyWith(
-                    trackHeight: 3,
+                      SliderTheme.of(
+                    context,
+                  ).copyWith(
+                    trackHeight: 4,
                     thumbShape:
                         const RoundSliderThumbShape(
-                      enabledThumbRadius: 6,
+                      enabledThumbRadius:
+                          6,
                     ),
                     overlayShape:
                         const RoundSliderOverlayShape(
-                      overlayRadius: 14,
+                      overlayRadius: 16,
                     ),
                   ),
                   child: Slider(
@@ -417,14 +524,23 @@ class _FullPlayerScreenState
                         ? durationMs
                             .toDouble()
                         : 1,
-                    activeColor: _gold,
+
+                    activeColor:
+                        _accent,
+
                     inactiveColor:
                         AppColors.cardDark,
-                    thumbColor: _gold,
+
+                    thumbColor:
+                        _accent,
+
                     overlayColor:
                         WidgetStatePropertyAll(
-                      _gold.withOpacity(0.15),
+                      _accent.withOpacity(
+                        0.15,
+                      ),
                     ),
+
                     onChanged: (value) {
                       audioService.seek(
                         Duration(
@@ -436,9 +552,11 @@ class _FullPlayerScreenState
                   ),
                 ),
 
+                // الوقت
                 Padding(
                   padding:
-                      const EdgeInsets.symmetric(
+                      const EdgeInsets
+                          .symmetric(
                     horizontal: 4,
                   ),
                   child: Row(
@@ -448,10 +566,12 @@ class _FullPlayerScreenState
                     children: [
                       Text(
                         _formatDuration(
-                          audioService.position,
+                          audioService
+                              .position,
                         ),
                         style:
-                            GoogleFonts.tajawal(
+                            GoogleFonts
+                                .tajawal(
                           color: AppColors
                               .secondaryText,
                           fontSize: 11,
@@ -459,10 +579,12 @@ class _FullPlayerScreenState
                       ),
                       Text(
                         _formatDuration(
-                          audioService.duration,
+                          audioService
+                              .duration,
                         ),
                         style:
-                            GoogleFonts.tajawal(
+                            GoogleFonts
+                                .tajawal(
                           color: AppColors
                               .secondaryText,
                           fontSize: 11,
@@ -472,32 +594,38 @@ class _FullPlayerScreenState
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(
+                  height: 12,
+                ),
 
+                // أزرار التحكم
                 Row(
                   mainAxisAlignment:
-                      MainAxisAlignment.center,
+                      MainAxisAlignment
+                          .center,
                   children: [
+                    // السابق
                     IconButton(
-                      onPressed:
-                          audioService
-                                  .hasPrevious
-                              ? audioService
-                                  .playPrevious
-                              : null,
+                      onPressed: audioService
+                              .hasPrevious
+                          ? audioService
+                              .playPrevious
+                          : null,
                       icon: Icon(
                         Icons
                             .skip_previous_rounded,
                         color: audioService
                                 .hasPrevious
-                            ? _gold
-                            : _gold.withOpacity(
-                                0.3,
-                              ),
-                        size: 26,
+                            ? _accent
+                            : _accent
+                                .withOpacity(
+                              0.3,
+                            ),
+                        size: 28,
                       ),
                     ),
 
+                    // -10
                     IconButton(
                       onPressed: () =>
                           audioService
@@ -505,20 +633,26 @@ class _FullPlayerScreenState
                       icon: const Icon(
                         Icons
                             .replay_10_rounded,
-                        color: _gold,
-                        size: 28,
+                        color: _accent,
+                        size: 29,
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(
+                      width: 12,
+                    ),
 
+                    // تشغيل / إيقاف
                     _PlayPauseButton(
                       audioService:
                           audioService,
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(
+                      width: 12,
+                    ),
 
+                    // +10
                     IconButton(
                       onPressed: () =>
                           audioService
@@ -526,34 +660,39 @@ class _FullPlayerScreenState
                       icon: const Icon(
                         Icons
                             .forward_10_rounded,
-                        color: _gold,
-                        size: 28,
+                        color: _accent,
+                        size: 29,
                       ),
                     ),
 
+                    // التالي
                     IconButton(
-                      onPressed:
-                          audioService.hasNext
-                              ? audioService
-                                  .playNext
-                              : null,
+                      onPressed: audioService
+                              .hasNext
+                          ? audioService
+                              .playNext
+                          : null,
                       icon: Icon(
                         Icons
                             .skip_next_rounded,
                         color: audioService
                                 .hasNext
-                            ? _gold
-                            : _gold.withOpacity(
-                                0.3,
-                              ),
-                        size: 26,
+                            ? _accent
+                            : _accent
+                                .withOpacity(
+                              0.3,
+                            ),
+                        size: 28,
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(
+                  height: 8,
+                ),
 
+                // تكرار
                 IconButton(
                   onPressed: () =>
                       audioService
@@ -562,15 +701,18 @@ class _FullPlayerScreenState
                     Icons.repeat_rounded,
                     color: audioService
                             .isRepeat
-                        ? _gold
-                        : _gold.withOpacity(
-                            0.5,
-                          ),
-                    size: 22,
+                        ? _accent
+                        : _accent
+                            .withOpacity(
+                          0.45,
+                        ),
+                    size: 23,
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(
+                  height: 12,
+                ),
               ],
             ),
           ),
@@ -586,13 +728,18 @@ class _FullPlayerScreenState
         Offset(121, 121);
 
     final dx =
-        localPosition.dx - center.dx;
+        localPosition.dx -
+            center.dx;
 
     final dy =
-        localPosition.dy - center.dy;
+        localPosition.dy -
+            center.dy;
 
     double angle =
-        (atan2Custom(dy, dx) +
+        (atan2Custom(
+                  dy,
+                  dx,
+                ) +
                 3.14159 / 2) /
             (2 * 3.14159);
 
@@ -602,7 +749,10 @@ class _FullPlayerScreenState
 
     setState(
       () => _seekValue =
-          angle.clamp(0.0, 1.0),
+          angle.clamp(
+        0.0,
+        1.0,
+      ),
     );
   }
 
@@ -610,67 +760,99 @@ class _FullPlayerScreenState
     double y,
     double x,
   ) {
-    return Offset(x, y).direction;
+    return Offset(
+      x,
+      y,
+    ).direction;
   }
 }
 
 class _PlayPauseButton
     extends StatefulWidget {
-  final AudioPlayerService audioService;
+  final AudioPlayerService
+      audioService;
 
   const _PlayPauseButton({
     required this.audioService,
   });
 
   @override
-  State<_PlayPauseButton> createState() =>
-      _PlayPauseButtonState();
+  State<_PlayPauseButton>
+      createState() =>
+          _PlayPauseButtonState();
 }
 
 class _PlayPauseButtonState
-    extends State<_PlayPauseButton> {
+    extends State<
+        _PlayPauseButton> {
   bool _pressed = false;
 
-  static const Color _gold =
-      Color(0xFFD6B56E);
+  static const Color _accent =
+      Color(0xFF18C7DE);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return GestureDetector(
       onTapDown: (_) =>
-          setState(() => _pressed = true),
+          setState(
+        () => _pressed = true,
+      ),
       onTapUp: (_) =>
-          setState(() => _pressed = false),
+          setState(
+        () => _pressed = false,
+      ),
       onTapCancel: () =>
-          setState(() => _pressed = false),
-      onTap: () => widget.audioService
-          .togglePlayPause(),
+          setState(
+        () => _pressed = false,
+      ),
+      onTap: () =>
+          widget.audioService
+              .togglePlayPause(),
       child: AnimatedScale(
-        scale: _pressed ? 0.92 : 1.0,
+        scale:
+            _pressed ? 0.92 : 1.0,
         duration:
-            const Duration(milliseconds: 120),
+            const Duration(
+          milliseconds: 120,
+        ),
         child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.mainText,
+          width: 66,
+          height: 66,
+          decoration:
+              BoxDecoration(
+            shape:
+                BoxShape.circle,
+
+            // نفس هوية التطبيق
+            color:
+                AppColors.mainText,
+
             boxShadow: [
               BoxShadow(
-                color: _gold
-                    .withOpacity(0.3),
-                blurRadius: 16,
+                color: _accent
+                    .withOpacity(
+                  0.30,
+                ),
+                blurRadius: 18,
+                spreadRadius: 1,
                 offset:
-                    const Offset(0, 6),
+                    const Offset(
+                  0,
+                  6,
+                ),
               ),
             ],
           ),
           child: Icon(
-            widget.audioService.isPlaying
+            widget.audioService
+                    .isPlaying
                 ? Icons.pause_rounded
-                : Icons.play_arrow_rounded,
-            color: _gold,
-            size: 34,
+                : Icons
+                    .play_arrow_rounded,
+            color: _accent,
+            size: 35,
           ),
         ),
       ),
