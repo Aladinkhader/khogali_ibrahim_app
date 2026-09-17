@@ -229,9 +229,9 @@ class AudioPlayerService extends ChangeNotifier {
 
       final mediaItem = MediaItem(
         id: lecture.audioUrl,
-        album: 'الشيخ د. محمد الأمين إسماعيل',
+        album: 'الشيخ أبو الحسن خوجلي إبراهيم',
         title: lecture.title,
-        artist: 'د. محمد الأمين إسماعيل',
+        artist: 'الشيخ أبو الحسن خوجلي إبراهيم',
       );
 
       final audioSource = AudioSource.uri(
