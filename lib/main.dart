@@ -36,9 +36,9 @@ Future<void> main() async {
       androidNotificationChannelId:
           'com.sheikhapp.temp_scaffold.channel.media.v2',
       androidNotificationChannelName:
-          'مشغل محاضرات الشيخ د. محمد الأمين',
+          'مشغل محاضرات الشيخ أبو الحسن خوجلي إبراهيم',
       androidNotificationChannelDescription:
-          'التحكم في تشغيل محاضرات الشيخ د. محمد الأمين من شريط الإشعارات',
+          'التحكم في تشغيل محاضرات الشيخ أبو الحسن خوجلي إبراهيم من شريط الإشعارات',
       androidNotificationIcon: 'mipmap/ic_launcher',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: false,
@@ -92,7 +92,7 @@ class SheikhApp extends StatelessWidget {
     }
 
     return MaterialApp(
-      title: 'الشيخ د. محمد الأمين إسماعيل',
+      title: 'الشيخ أبو الحسن خوجلي إبراهيم',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: const SplashScreen(),
