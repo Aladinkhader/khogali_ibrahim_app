@@ -12,13 +12,17 @@ void showSheikhBioDialog(BuildContext context) {
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 500),
+            constraints: const BoxConstraints(
+              maxWidth: 420,
+              maxHeight: 500,
+            ),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: AppColors.cardDark,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                  color: AppColors.primaryTeal.withOpacity(0.4)),
+                color: AppColors.primaryTeal.withOpacity(0.4),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.4),
@@ -34,7 +38,7 @@ void showSheikhBioDialog(BuildContext context) {
                   children: [
                     const Expanded(
                       child: Text(
-                        'من هو الشيخ د. محمد الأمين إسماعيل',
+                        'من هو الشيخ أبو الحسن خوجلي إبراهيم',
                         style: TextStyle(
                           color: AppColors.mainText,
                           fontSize: 14,
@@ -44,13 +48,18 @@ void showSheikhBioDialog(BuildContext context) {
                     ),
                     GestureDetector(
                       onTap: () => Navigator.of(context).pop(),
-                      child: Icon(Icons.close,
-                          color: AppColors.secondaryText, size: 20),
+                      child: Icon(
+                        Icons.close,
+                        color: AppColors.secondaryText,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Divider(color: AppColors.cardGradientStart.withOpacity(0.4)),
+                Divider(
+                  color: AppColors.cardGradientStart.withOpacity(0.4),
+                ),
                 const SizedBox(height: 10),
                 Flexible(
                   child: SingleChildScrollView(
@@ -58,16 +67,22 @@ void showSheikhBioDialog(BuildContext context) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _BioParagraph(
-                          'هو فضيلة الشيخ الداعية الدكتور محمد الأمين إسماعيل، أحد أبرز الدعاة والعلماء البارزين في السودان.',
+                          'عضو المجلس العلمي بجماعة أنصار السنة المحمدية بالسودان.',
                         ),
                         _BioParagraph(
-                          'يحمل درجات علمية رفيعة في الشريعة الإسلامية والعقيدة، وعُرف بدروسه ومحاضراته المنهجية التي تلقى قبولاً واسعاً.',
+                          'يُعرف بعنايته بالقرآن والسنة وعلوم العقيدة والفقه، وبجهوده في تدريس العلم الشرعي وتعليمه لطلاب العلم. وقد تلقى العلم عن عدد من علماء السودان والمملكة العربية السعودية، ومن أبرزهم الشيخ عبد المحسن بن حمد العباد، والشيخ عبد الرزاق البدر، والدكتور إبراهيم الرحيلي، والشيخ يحيى بن عبد العزيز اليحيى، وغيرهم.',
                         ),
                         _BioParagraph(
-                          'له إسهامات دعوية كبيرة داخل السودان وخارجه من خلال الخطب والمواعظ والبرامج التلفزيونية والإذاعية والدورات العلمية الموجهة لطلبة العلم وعامة المسلمين.',
+                          'وله عدد من المؤلفات والرسائل العلمية، من أبرزها: القول المسدد، والنصيحة، وإثبات علو الله على خلقه، ومائة حديث في أركان الإسلام، ومائة حديث في أركان الإيمان، وتذكير الأتقياء بحرمة سفك الدماء، والمخالفون لأهل السنة والجماعة في الإيمان.',
                         ),
                         _BioParagraph(
-                          'يتميز بأسلوبه العلمي الرصين وحرصه على نشر التوحيد والسنة والمنهج الوسطي المستقيم.',
+                          'كما له دروس ودورات علمية في العقيدة والفقه والفرائض وغيرها، ومن أبرزها: شرح العقيدة الطحاوية، وشرح العقيدة الواسطية، وشرح سلم الوصول، وشرح القواعد المثلى، وشرح القواعد الفقهية، وشرح الرحبية، وشرح تقريب التدمرية، وشرح تلخيص الحموية، إلى جانب دروسه في التوحيد والتفسير والسيرة.',
+                        ),
+                        _BioParagraph(
+                          'وقد أسهم في تعليم طلاب العلم وإقامة الدورات العلمية وحلقات تحفيظ القرآن، ولا يزال يبذل جهده في تعليم الناس وإفادتهم.',
+                        ),
+                        _BioParagraph(
+                          'نسأل الله أن يحفظه وينفع بعلمه، ويجزيه خير الجزاء على ما يقدمه في خدمة كتاب الله وسنة رسوله ﷺ وتعليم طلاب العلم.',
                         ),
                       ],
                     ),
@@ -89,7 +104,9 @@ void showSheikhBioDialog(BuildContext context) {
                     child: const Text(
                       'إغلاق',
                       style: TextStyle(
-                          fontSize: 12, fontWeight: FontWeight.bold),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -104,6 +121,7 @@ void showSheikhBioDialog(BuildContext context) {
 
 class _BioParagraph extends StatelessWidget {
   final String text;
+
   const _BioParagraph(this.text);
 
   @override
