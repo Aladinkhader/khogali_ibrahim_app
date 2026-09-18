@@ -141,8 +141,8 @@ class _AllLecturesTabState
                         BorderRadius.circular(20),
                     border: Border.all(
                       color: AppColors
-                          .cardGradientStart
-                          .withOpacity(0.5),
+                          .primaryTeal
+                          .withOpacity(0.45),
                     ),
                   ),
                   child: Text(
@@ -151,7 +151,7 @@ class _AllLecturesTabState
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color:
-                          AppColors.secondaryText,
+                          AppColors.primaryTeal,
                     ),
                   ),
                 ),
@@ -176,8 +176,8 @@ class _AllLecturesTabState
               fillColor: AppColors.cardDark,
               prefixIcon: Icon(
                 Icons.search,
-                color: AppColors.secondaryText
-                    .withOpacity(0.6),
+                color: AppColors.primaryTeal
+                    .withOpacity(0.75),
                 size: 18,
               ),
               contentPadding:
@@ -320,9 +320,6 @@ class _LectureRowState
     extends State<_LectureRow> {
   bool _pressed = false;
 
-  static const Color _gold =
-      Color(0xFFD6B56E);
-
   void _setPressed(bool value) {
     setState(() => _pressed = value);
 
@@ -428,7 +425,7 @@ class _LectureRowState
                     width:
                         isThisPlaying ? 1.5 : 1,
                     color: isThisPlaying
-                        ? _gold
+                        ? AppColors.primaryTeal
                         : _pressed
                             ? AppColors
                                 .primaryTeal
@@ -480,14 +477,16 @@ class _LectureRowState
                       decoration:
                           BoxDecoration(
                         color:
-                            _gold.withOpacity(
+                            AppColors.primaryTeal
+                                .withOpacity(
                           0.12,
                         ),
                         shape:
                             BoxShape.circle,
                         border: Border.all(
                           color:
-                              _gold.withOpacity(
+                              AppColors.primaryTeal
+                                  .withOpacity(
                             0.35,
                           ),
                         ),
@@ -498,7 +497,8 @@ class _LectureRowState
                                 .pause_rounded
                             : Icons
                                 .play_arrow_rounded,
-                        color: _gold,
+                        color:
+                            AppColors.primaryTeal,
                         size: 27,
                       ),
                     ),
@@ -553,12 +553,14 @@ class _LectureRowState
                                           strokeWidth:
                                               2.5,
                                           backgroundColor:
-                                              _gold
+                                              AppColors
+                                                  .primaryTeal
                                                   .withOpacity(
                                             0.18,
                                           ),
                                           color:
-                                              _gold,
+                                              AppColors
+                                                  .primaryTeal,
                                         );
                                       },
                                     ),
@@ -577,13 +579,14 @@ class _LectureRowState
                                             .round(),
                                       ),
                                       style:
-                                          const TextStyle(
+                                          TextStyle(
                                         fontSize: 7,
                                         fontWeight:
                                             FontWeight
                                                 .bold,
                                         color:
-                                            _gold,
+                                            AppColors
+                                                .primaryTeal,
                                       ),
                                     ),
                                   ),
@@ -595,7 +598,8 @@ class _LectureRowState
                                         .check_circle
                                     : Icons
                                         .download_rounded,
-                                color: _gold,
+                                color:
+                                    AppColors.primaryTeal,
                                 size: 22,
                               ),
                       ),
@@ -635,12 +639,12 @@ class _LectureRowState
                                 TextOverflow
                                     .ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors
-                                  .secondaryText
-                                  .withOpacity(
-                                0.8,
-                              ),
+                              fontSize: 11,
+                              height: 1.3,
+                              fontWeight:
+                                  FontWeight.w600,
+                              color:
+                                  AppColors.lightText,
                             ),
                           ),
                         ],
@@ -658,7 +662,8 @@ class _LectureRowState
                             ? Icons.bookmark
                             : Icons
                                 .bookmark_border,
-                        color: _gold,
+                        color:
+                            AppColors.primaryTeal,
                         size: 22,
                       ),
                     ),
@@ -669,13 +674,10 @@ class _LectureRowState
                               .shareLecture(
                         widget.lecture,
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.share_outlined,
-                        color: AppColors
-                            .secondaryText
-                            .withOpacity(
-                          0.7,
-                        ),
+                        color:
+                            AppColors.primaryTeal,
                         size: 20,
                       ),
                     ),
