@@ -21,6 +21,11 @@ class ArchiveService {
 
   static const Duration _requestTimeout = Duration(seconds: 20);
 
+  // عدد طلبات صفحات الأقسام التي تعمل في نفس الوقت.
+  // اخترنا رقمًا متوسطًا حتى نسرّع الاستيراد دون الضغط الزائد
+  // على الموقع أو اتصال الهاتف.
+  static const int _parallelRequests = 6;
+
   /// يجلب أقسام الصوتيات من الموقع الرسمي.
   ///
   /// المفتاح = رابط صفحة القسم
@@ -144,22 +149,58 @@ class ArchiveService {
     } catch (_) {}
   }
 
+  /// يجلب صفحات الأقسام بالتوازي على دفعات صغيرة.
+  ///
+  /// النسخة القديمة كانت تنتظر انتهاء القسم الأول ثم تبدأ الثاني،
+  /// ثم الثالث، وهكذا.
+  ///
+  /// الآن يتم تشغيل عدة طلبات في نفس الوقت، مع الاحتفاظ
+  /// بالتعامل مع أخطاء كل قسم بصورة مستقلة.
   static Future<List<Lecture>> _fetchFromNetwork() async {
     final sectionsMap = await fetchSections();
 
     final List<Lecture> all = [];
     final List<String> errors = [];
 
-    for (final entry in sectionsMap.entries) {
-      try {
-        final lectures = await fetchSectionLectures(
-          entry.key,
-          entry.value,
-        );
+    final entries = sectionsMap.entries.toList();
 
-        all.addAll(lectures);
-      } catch (e) {
-        errors.add('${entry.value}: $e');
+    for (var start = 0; start < entries.length; start += _parallelRequests) {
+      final end = (start + _parallelRequests < entries.length)
+          ? start + _parallelRequests
+          : entries.length;
+
+      final batch = entries.sublist(start, end);
+
+      final results = await Future.wait(
+        batch.map(
+          (entry) async {
+            try {
+              final lectures = await fetchSectionLectures(
+                entry.key,
+                entry.value,
+              );
+
+              return _SectionFetchResult.success(
+                lectures,
+              );
+            } catch (e) {
+              return _SectionFetchResult.failure(
+                entry.value,
+                e.toString(),
+              );
+            }
+          },
+        ),
+      );
+
+      for (final result in results) {
+        if (result.lectures != null) {
+          all.addAll(result.lectures!);
+        }
+
+        if (result.error != null) {
+          errors.add(result.error!);
+        }
       }
     }
 
@@ -605,5 +646,34 @@ class ArchiveService {
 
     await prefs.remove(_cacheKey);
     await prefs.remove('${_cacheKey}_sections');
+  }
+}
+
+/// نتيجة تحميل قسم واحد.
+///
+/// نستخدمها حتى لا يؤدي فشل قسم واحد إلى إلغاء بقية
+/// الطلبات التي تعمل بالتوازي.
+class _SectionFetchResult {
+  final List<Lecture>? lectures;
+  final String? error;
+
+  const _SectionFetchResult({
+    this.lectures,
+    this.error,
+  });
+
+  factory _SectionFetchResult.success(List<Lecture> lectures) {
+    return _SectionFetchResult(
+      lectures: lectures,
+    );
+  }
+
+  factory _SectionFetchResult.failure(
+    String sectionTitle,
+    String error,
+  ) {
+    return _SectionFetchResult(
+      error: '$sectionTitle: $error',
+    );
   }
 }
