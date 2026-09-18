@@ -41,13 +41,80 @@ class _HomeTabState extends State<HomeTab> {
     });
 
     try {
-      final lectures = await ArchiveService.fetchFeaturedMix();
+      /*
+       * لا نستورد مكتبة المحاضرات كاملة من أجل الرئيسية.
+       *
+       * نجلب الأقسام فقط، ثم نأخذ عددًا محدودًا من الأقسام
+       * ونحمل صفحاتها بالتوازي. هذا يجعل "مختارات من المحاضرات"
+       * أسرع بكثير في أول تشغيل للتطبيق.
+       */
+      final sections = await ArchiveService.fetchSections();
+
+      if (sections.isEmpty) {
+        throw Exception('لا توجد أقسام صوتية.');
+      }
+
+      final entries = sections.entries.toList();
+
+      const int batchSize = 6;
+      const int wantedSections = 6;
+      const int lecturesPerSection = 3;
+
+      final List<Lecture> selected = [];
+
+      for (var start = 0;
+          start < entries.length && selected.length < wantedSections * lecturesPerSection;
+          start += batchSize) {
+        final end = (start + batchSize < entries.length)
+            ? start + batchSize
+            : entries.length;
+
+        final batch = entries.sublist(start, end);
+
+        final results = await Future.wait(
+          batch.map(
+            (entry) async {
+              try {
+                return await ArchiveService.fetchSectionLectures(
+                  entry.key,
+                  entry.value,
+                );
+              } catch (_) {
+                return <Lecture>[];
+              }
+            },
+          ),
+        );
+
+        for (final lectures in results) {
+          if (lectures.isEmpty) {
+            continue;
+          }
+
+          selected.addAll(
+            lectures.take(lecturesPerSection),
+          );
+
+          if (selected.length >= wantedSections * lecturesPerSection) {
+            break;
+          }
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
-        _lectures = lectures;
+        _lectures = selected;
         _loading = false;
+        _error = selected.isEmpty;
       });
     } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
       setState(() {
         _error = true;
         _loading = false;
@@ -290,9 +357,6 @@ class _LectureCard extends StatefulWidget {
 class _LectureCardState extends State<_LectureCard> {
   bool _pressed = false;
 
-  static const Color _gold =
-      Color(0xFFD6B56E);
-
   void _setPressed(bool value) {
     setState(() => _pressed = value);
 
@@ -390,7 +454,7 @@ class _LectureCardState extends State<_LectureCard> {
                   border: Border.all(
                     width: isThisPlaying ? 1.5 : 1,
                     color: isThisPlaying
-                        ? _gold
+                        ? AppColors.primaryTeal
                         : _pressed
                             ? AppColors.primaryTeal
                             : AppColors
@@ -431,19 +495,22 @@ class _LectureCardState extends State<_LectureCard> {
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color:
-                            _gold.withOpacity(0.12),
+                        color: AppColors
+                            .primaryTeal
+                            .withOpacity(0.12),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color:
-                              _gold.withOpacity(0.35),
+                          color: AppColors
+                              .primaryTeal
+                              .withOpacity(0.35),
                         ),
                       ),
                       child: Icon(
                         isThisPlaying
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
-                        color: _gold,
+                        color:
+                            AppColors.primaryTeal,
                         size: 27,
                       ),
                     ),
@@ -492,10 +559,14 @@ class _LectureCardState extends State<_LectureCard> {
                                               animatedProgress,
                                           strokeWidth: 2.5,
                                           backgroundColor:
-                                              _gold.withOpacity(
+                                              AppColors
+                                                  .primaryTeal
+                                                  .withOpacity(
                                             0.18,
                                           ),
-                                          color: _gold,
+                                          color:
+                                              AppColors
+                                                  .primaryTeal,
                                         );
                                       },
                                     ),
@@ -512,11 +583,13 @@ class _LectureCardState extends State<_LectureCard> {
                                             .round(),
                                       ),
                                       style:
-                                          const TextStyle(
+                                          TextStyle(
                                         fontSize: 7,
                                         fontWeight:
                                             FontWeight.bold,
-                                        color: _gold,
+                                        color:
+                                            AppColors
+                                                .primaryTeal,
                                       ),
                                     ),
                                   ),
@@ -527,7 +600,8 @@ class _LectureCardState extends State<_LectureCard> {
                                     ? Icons.check_circle
                                     : Icons
                                         .download_rounded,
-                                color: _gold,
+                                color:
+                                    AppColors.primaryTeal,
                                 size: 22,
                               ),
                       ),
@@ -559,10 +633,12 @@ class _LectureCardState extends State<_LectureCard> {
                             overflow:
                                 TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors
-                                  .secondaryText
-                                  .withOpacity(0.8),
+                              fontSize: 11,
+                              height: 1.3,
+                              fontWeight:
+                                  FontWeight.w600,
+                              color:
+                                  AppColors.lightText,
                             ),
                           ),
                         ],
@@ -579,7 +655,8 @@ class _LectureCardState extends State<_LectureCard> {
                         isFav
                             ? Icons.bookmark
                             : Icons.bookmark_border,
-                        color: _gold,
+                        color:
+                            AppColors.primaryTeal,
                         size: 22,
                       ),
                     ),
@@ -591,7 +668,8 @@ class _LectureCardState extends State<_LectureCard> {
                       ),
                       child: const Icon(
                         Icons.share_outlined,
-                        color: _gold,
+                        color:
+                            AppColors.primaryTeal,
                         size: 20,
                       ),
                     ),
