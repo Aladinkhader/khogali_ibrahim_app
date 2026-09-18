@@ -16,8 +16,6 @@ class SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<SettingsTab> {
-  static const Color _gold = Color(0xFFD6B56E);
-
   bool _clearing = false;
 
   Future<void> _clearCache() async {
@@ -62,10 +60,10 @@ class _SettingsTabState extends State<SettingsTab> {
 
   Future<void> _shareApp() async {
     await Share.share(
-      'تطبيق الشيخ د. محمد الأمين إسماعيل\n\n'
+      'تطبيق الشيخ أبو الحسن خوجلي إبراهيم\n\n'
       'استمع إلى محاضرات الشيخ واستفد من مكتبته الصوتية.\n\n'
       'شارك التطبيق مع من تحب.',
-      subject: 'تطبيق الشيخ د. محمد الأمين إسماعيل',
+      subject: 'تطبيق الشيخ أبو الحسن خوجلي إبراهيم',
     );
   }
 
@@ -95,7 +93,7 @@ class _SettingsTabState extends State<SettingsTab> {
               ),
               child: ClipOval(
                 child: Image.asset(
-                  'assets/images/sheikh.jpg',
+                  'assets/images/khogali.png',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -107,7 +105,7 @@ class _SettingsTabState extends State<SettingsTab> {
 
         _SettingsCard(
           child: _SettingsItem(
-            title: 'من هو الشيخ د. محمد الأمين إسماعيل',
+            title: 'من هو الشيخ أبو الحسن خوجلي إبراهيم',
             icon: Icons.info_outline,
             onTap: () => showSheikhBioDialog(context),
           ),
@@ -169,12 +167,12 @@ class _SettingsTabState extends State<SettingsTab> {
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              color: _gold,
+                              color: AppColors.primaryTeal,
                             ),
                           )
                         : const Icon(
                             Icons.delete_sweep_outlined,
-                            color: _gold,
+                            color: AppColors.primaryTeal,
                             size: 26,
                           ),
                   ),
@@ -313,8 +311,6 @@ class _SettingsItem extends StatefulWidget {
 class _SettingsItemState extends State<_SettingsItem> {
   bool _pressed = false;
 
-  static const Color _gold = Color(0xFFD6B56E);
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -340,9 +336,9 @@ class _SettingsItemState extends State<_SettingsItem> {
                 ),
               ),
             ),
-            Icon(
+            const Icon(
               widget.icon,
-              color: _gold,
+              color: AppColors.primaryTeal,
               size: 22,
             ),
           ],
@@ -475,7 +471,7 @@ class _AnimatedShimmerTextState
             return const LinearGradient(
               colors: [
                 AppColors.mainText,
-                Color(0xFFD6B56E),
+                AppColors.primaryTeal,
                 AppColors.mainText,
               ],
               stops: [
