@@ -321,7 +321,7 @@ class _SettingsItemState extends State<_SettingsItem> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         color: _pressed
-            ? const Color(0xFF165652)
+            ? AppColors.cardGradientStart
             : Colors.transparent,
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -336,7 +336,7 @@ class _SettingsItemState extends State<_SettingsItem> {
                 ),
               ),
             ),
-            const Icon(
+            Icon(
               widget.icon,
               color: AppColors.primaryTeal,
               size: 22,
