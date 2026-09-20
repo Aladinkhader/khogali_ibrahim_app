@@ -19,11 +19,14 @@ class ArchiveService {
   // مع بيانات الشيخ أبي الحسن خوجلي إبراهيم.
   static const String _cacheKey = 'khogali_lectures_cache_v1';
 
+  // Cache مستقل لمحاضرات كل قسم.
+  // هذا يجعل شاشة المختارات تفتح بسرعة بعد أول تحميل.
+  static const String _sectionLecturesCacheKey =
+      'khogali_section_lectures_cache_v1';
+
   static const Duration _requestTimeout = Duration(seconds: 20);
 
   // عدد طلبات صفحات الأقسام التي تعمل في نفس الوقت.
-  // اخترنا رقمًا متوسطًا حتى نسرّع الاستيراد دون الضغط الزائد
-  // على الموقع أو اتصال الهاتف.
   static const int _parallelRequests = 6;
 
   /// يجلب أقسام الصوتيات من الموقع الرسمي.
@@ -83,7 +86,6 @@ class ArchiveService {
 
     final Map<String, String> result = {};
 
-    // نبحث عن جميع روابط audio-category في الصفحة.
     final linkRegex = RegExp(
       r'''<a\b[^>]*href\s*=\s*["']([^"']*\/audio-category\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>''',
       caseSensitive: false,
@@ -150,12 +152,6 @@ class ArchiveService {
   }
 
   /// يجلب صفحات الأقسام بالتوازي على دفعات صغيرة.
-  ///
-  /// النسخة القديمة كانت تنتظر انتهاء القسم الأول ثم تبدأ الثاني،
-  /// ثم الثالث، وهكذا.
-  ///
-  /// الآن يتم تشغيل عدة طلبات في نفس الوقت، مع الاحتفاظ
-  /// بالتعامل مع أخطاء كل قسم بصورة مستقلة.
   static Future<List<Lecture>> _fetchFromNetwork() async {
     final sectionsMap = await fetchSections();
 
@@ -213,7 +209,8 @@ class ArchiveService {
 
   /// يجلب محاضرات قسم واحد من صفحة القسم في موقع الشيخ.
   ///
-  /// identifier هنا هو رابط صفحة القسم نفسه.
+  /// إذا كانت المحاضرات محفوظة محليًا، يعيدها فورًا،
+  /// ثم يحاول تحديثها من الموقع في الخلفية.
   static Future<List<Lecture>> fetchSectionLectures(
     String identifier,
     String sectionTitle,
@@ -224,6 +221,30 @@ class ArchiveService {
       throw Exception('رابط القسم غير صالح.');
     }
 
+    final cached = await _readSectionLecturesCache(url);
+
+    if (cached != null && cached.isNotEmpty) {
+      _refreshSectionLecturesInBackground(
+        url,
+        sectionTitle,
+      );
+
+      return cached;
+    }
+
+    return _fetchSectionLecturesFromWebsite(
+      url,
+      sectionTitle,
+      saveToCache: true,
+    );
+  }
+
+  /// تحميل قسم واحد من الموقع وحفظه في Cache.
+  static Future<List<Lecture>> _fetchSectionLecturesFromWebsite(
+    String url,
+    String sectionTitle, {
+    bool saveToCache = false,
+  }) async {
     final response = await http
         .get(
           Uri.parse(url),
@@ -282,23 +303,38 @@ class ArchiveService {
           title: title,
           section: sectionTitle,
           audioUrl: audioUrl,
-          identifier: identifier,
+          identifier: url,
         ),
       );
     }
 
     _sortLectures(lectures);
 
+    if (saveToCache && lectures.isNotEmpty) {
+      await _writeSectionLecturesCache(
+        url,
+        lectures,
+      );
+    }
+
     return lectures;
   }
 
+  /// يحدث Cache قسم واحد في الخلفية دون تعطيل الشاشة.
+  static Future<void> _refreshSectionLecturesInBackground(
+    String url,
+    String sectionTitle,
+  ) async {
+    try {
+      await _fetchSectionLecturesFromWebsite(
+        url,
+        sectionTitle,
+        saveToCache: true,
+      );
+    } catch (_) {}
+  }
+
   /// ينشئ اسمًا نظيفًا للمحاضرة من اسم الملف الموجود في Archive.org.
-  ///
-  /// أمثلة:
-  /// 1.mp3      -> الدرس 1
-  /// 2.mp3      -> الدرس 2
-  /// 10.mp3     -> الدرس 10
-  /// lecture.mp3 -> lecture
   static String _buildLectureTitle(String fileName) {
     var name = fileName;
 
@@ -374,7 +410,6 @@ class ArchiveService {
         .replaceAll('  ', ' ')
         .trim();
 
-    // إزالة السنة الهجرية من نهاية الاسم مع الإبقاء على اسم السلسلة نظيفًا.
     result = result.replaceAll(
       RegExp(r'\s*[-–—]?\s*144[0-9]\s*هـ?\s*$', caseSensitive: false),
       '',
@@ -587,33 +622,156 @@ class ArchiveService {
     } catch (_) {}
   }
 
+  /// يقرأ Cache المحاضرات الخاصة بكل قسم.
+  static Future<Map<String, List<Lecture>>>
+      _readSectionLecturesCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final raw = prefs.getString(_sectionLecturesCacheKey);
+
+      if (raw == null || raw.isEmpty) {
+        return {};
+      }
+
+      final decoded = jsonDecode(raw);
+
+      if (decoded is! Map) {
+        return {};
+      }
+
+      final result = <String, List<Lecture>>{};
+
+      for (final entry in decoded.entries) {
+        final value = entry.value;
+
+        if (value is! List) {
+          continue;
+        }
+
+        final lectures = value
+            .whereType<Map>()
+            .map(
+              (item) => Lecture(
+                title: item['title']?.toString() ?? '',
+                section: item['section']?.toString() ?? '',
+                audioUrl: item['audioUrl']?.toString() ?? '',
+                identifier: item['identifier']?.toString() ?? '',
+              ),
+            )
+            .where(
+              (lecture) =>
+                  lecture.title.isNotEmpty &&
+                  lecture.audioUrl.isNotEmpty,
+            )
+            .toList();
+
+        if (lectures.isNotEmpty) {
+          result[entry.key.toString()] = lectures;
+        }
+      }
+
+      return result;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /// يقرأ محاضرات قسم محدد من التخزين المحلي.
+  static Future<List<Lecture>?> _readSectionLecturesCache(
+    String identifier,
+  ) async {
+    final cache = await _readSectionLecturesCache();
+
+    return cache[identifier];
+  }
+
+  /// يحفظ محاضرات قسم محدد في التخزين المحلي.
+  static Future<void> _writeSectionLecturesCache(
+    String identifier,
+    List<Lecture> lectures,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final cache = await _readSectionLecturesCache();
+
+      cache[identifier] = lectures;
+
+      final encoded = <String, dynamic>{};
+
+      for (final entry in cache.entries) {
+        encoded[entry.key] = entry.value
+            .map(
+              (lecture) => {
+                'title': lecture.title,
+                'section': lecture.section,
+                'audioUrl': lecture.audioUrl,
+                'identifier': lecture.identifier,
+              },
+            )
+            .toList();
+      }
+
+      await prefs.setString(
+        _sectionLecturesCacheKey,
+        jsonEncode(encoded),
+      );
+    } catch (_) {}
+  }
+
   /// يرجع تشكيلة من المحاضرات لواجهة الرئيسية.
   ///
-  /// يتم اختيار عدد محدود من أول الدروس من الأقسام المتاحة
-  /// ثم خلطها بالتناوب.
+  /// تعتمد على Cache الأقسام، لذلك بعد أول تحميل
+  /// تصبح المختارات سريعة عند الدخول إليها مرة أخرى.
   static Future<List<Lecture>> fetchFeaturedMix() async {
-    final all = await fetchAllLectures();
+    final sectionsMap = await fetchSections();
 
-    if (all.isEmpty) {
+    if (sectionsMap.isEmpty) {
       return [];
     }
 
-    final Map<String, List<Lecture>> bySection = {};
-
-    for (final lecture in all) {
-      bySection.putIfAbsent(lecture.section, () => []).add(lecture);
-    }
+    final entries = sectionsMap.entries.toList();
 
     final List<List<Lecture>> selectedLists = [];
 
-    for (final entry in bySection.entries) {
-      final list = entry.value;
+    for (var start = 0;
+        start < entries.length;
+        start += _parallelRequests) {
+      final end = (start + _parallelRequests < entries.length)
+          ? start + _parallelRequests
+          : entries.length;
 
-      if (list.isEmpty) {
-        continue;
+      final batch = entries.sublist(start, end);
+
+      final results = await Future.wait(
+        batch.map(
+          (entry) async {
+            try {
+              return await fetchSectionLectures(
+                entry.key,
+                entry.value,
+              );
+            } catch (_) {
+              return <Lecture>[];
+            }
+          },
+        ),
+      );
+
+      for (final lectures in results) {
+        if (lectures.isEmpty) {
+          continue;
+        }
+
+        selectedLists.add(
+          lectures.take(3).toList(),
+        );
+
+        if (selectedLists.length >= 6) {
+          break;
+        }
       }
-
-      selectedLists.add(list.take(3).toList());
 
       if (selectedLists.length >= 6) {
         break;
@@ -646,13 +804,11 @@ class ArchiveService {
 
     await prefs.remove(_cacheKey);
     await prefs.remove('${_cacheKey}_sections');
+    await prefs.remove(_sectionLecturesCacheKey);
   }
 }
 
 /// نتيجة تحميل قسم واحد.
-///
-/// نستخدمها حتى لا يؤدي فشل قسم واحد إلى إلغاء بقية
-/// الطلبات التي تعمل بالتوازي.
 class _SectionFetchResult {
   final List<Lecture>? lectures;
   final String? error;
