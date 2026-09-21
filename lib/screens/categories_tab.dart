@@ -684,7 +684,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
         16,
         16,
         16,
-        100,
+        16,
       ),
       child: FutureBuilder<
           Map<String, String>>(
