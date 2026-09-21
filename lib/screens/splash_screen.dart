@@ -29,11 +29,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
     );
 
     _scaleAnim = Tween<double>(
-      begin: 0.6,
+      begin: 0.72,
       end: 1.0,
     ).animate(
       CurvedAnimation(
@@ -54,18 +54,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     _textController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 850),
+      duration: const Duration(milliseconds: 2600),
     );
 
     _shimmerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 700),
     );
 
     _controller.forward();
 
     Future.delayed(
-      const Duration(milliseconds: 350),
+      const Duration(milliseconds: 500),
       () {
         if (mounted) {
           _textController.forward();
@@ -74,23 +74,30 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     Future.delayed(
-      const Duration(milliseconds: 1250),
+      const Duration(milliseconds: 850),
       () {
         if (mounted) {
-          _shimmerController.forward();
+          _shimmerController.repeat();
         }
       },
     );
 
+    /*
+     * نترك وقتًا كافيًا للمستخدم لقراءة الاسم
+     * بعد اكتمال ظهوره.
+     */
     Future.delayed(
-      const Duration(milliseconds: 1900),
+      const Duration(milliseconds: 5200),
       () {
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
-              transitionDuration: const Duration(milliseconds: 500),
-              pageBuilder: (_, anim, __) => const MainShell(),
-              transitionsBuilder: (_, anim, __, child) {
+              transitionDuration:
+                  const Duration(milliseconds: 650),
+              pageBuilder: (_, anim, __) =>
+                  const MainShell(),
+              transitionsBuilder:
+                  (_, anim, __, child) {
                 return FadeTransition(
                   opacity: anim,
                   child: child,
@@ -114,7 +121,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.veryDarkBackground,
+      backgroundColor:
+          AppColors.veryDarkBackground,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnim,
@@ -124,60 +132,95 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 const _PulsingAvatar(),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 28),
+
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 24,
+                  ),
                   child: AnimatedBuilder(
                     animation: Listenable.merge([
                       _textController,
                       _shimmerController,
                     ]),
-                    builder: (context, child) {
-                      final visibleCount =
-                          (_textController.value * _title.length)
-                              .floor()
-                              .clamp(0, _title.length);
+                    builder:
+                        (context, child) {
+                      final progress =
+                          _textController.value;
 
-                      final visibleText = _title.substring(
+                      final visibleCount =
+                          (progress *
+                                  _title.length)
+                              .floor()
+                              .clamp(
+                                0,
+                                _title.length,
+                              );
+
+                      final visibleText =
+                          _title.substring(
                         0,
                         visibleCount,
                       );
 
-                      return ShaderMask(
-                        shaderCallback: (bounds) {
-                          final shimmer = _shimmerController.value;
+                      /*
+                       * الضوء يتحرك مع الحرف الجاري ظهوره.
+                       *
+                       * بعد أن يظهر الحرف:
+                       * يبقى أبيض.
+                       *
+                       * السماوي يظهر فقط حول
+                       * منطقة الحرف الجديد.
+                       */
+                      final currentPosition =
+                          progress *
+                              _title.length;
 
-                          return const LinearGradient(
-                            colors: [
-                              AppColors.mainText,
-                              _accent,
-                              AppColors.mainText,
-                            ],
-                            stops: [
-                              0.0,
-                              0.5,
-                              1.0,
-                            ],
-                          ).createShader(
-                            Rect.fromLTWH(
-                              bounds.left - (bounds.width * shimmer),
-                              bounds.top,
-                              bounds.width * 2,
-                              bounds.height,
+                      return Stack(
+                        alignment:
+                            Alignment.center,
+                        children: [
+                          /*
+                           * النص الأساسي:
+                           * كل الحروف التي ظهرت
+                           * لونها أبيض دائمًا.
+                           */
+                          Text(
+                            visibleText,
+                            textAlign:
+                                TextAlign.center,
+                            style:
+                                GoogleFonts.tajawal(
+                              fontSize: 24,
+                              fontWeight:
+                                  FontWeight.w900,
+                              color:
+                                  AppColors.mainText,
+                              letterSpacing: 0.5,
                             ),
-                          );
-                        },
-                        blendMode: BlendMode.srcIn,
-                        child: Text(
-                          visibleText,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.tajawal(
-                            fontSize: 23,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.mainText,
-                            letterSpacing: 0.5,
                           ),
-                        ),
+
+                          /*
+                           * طبقة الضوء السماوي.
+                           *
+                           * تظهر فقط أثناء دخول
+                           * الحرف الجديد، وليس على
+                           * كامل الكلمة.
+                           */
+                          if (visibleCount <
+                              _title.length)
+                            _ShimmerCharacter(
+                              title: _title,
+                              visibleCount:
+                                  visibleCount,
+                              progress:
+                                  currentPosition -
+                                      visibleCount,
+                              accent: _accent,
+                            ),
+                        ],
                       );
                     },
                   ),
@@ -191,26 +234,117 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _PulsingAvatar extends StatefulWidget {
+class _ShimmerCharacter
+    extends StatelessWidget {
+  final String title;
+  final int visibleCount;
+  final double progress;
+  final Color accent;
+
+  const _ShimmerCharacter({
+    required this.title,
+    required this.visibleCount,
+    required this.progress,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (visibleCount >= title.length) {
+      return const SizedBox.shrink();
+    }
+
+    /*
+     * الحرف الحالي.
+     */
+    final currentCharacter =
+        title[visibleCount];
+
+    /*
+     * إذا كان الحرف مسافة،
+     * لا نعرض ضوءًا عليها.
+     */
+    if (currentCharacter == ' ') {
+      return const SizedBox.shrink();
+    }
+
+    return IgnorePointer(
+      child: ShaderMask(
+        shaderCallback: (bounds) {
+          /*
+           * الضوء يمر من اليمين إلى اليسار
+           * داخل الحرف الحالي.
+           */
+          final position =
+              progress.clamp(0.0, 1.0);
+
+          return LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: [
+              accent.withOpacity(0.0),
+              accent,
+              accent.withOpacity(0.0),
+            ],
+            stops: [
+              (position - 0.35)
+                  .clamp(0.0, 1.0),
+              position.clamp(0.0, 1.0),
+              (position + 0.35)
+                  .clamp(0.0, 1.0),
+            ],
+          ).createShader(
+            Rect.fromLTWH(
+              bounds.left,
+              bounds.top,
+              bounds.width,
+              bounds.height,
+            ),
+          );
+        },
+        blendMode: BlendMode.srcIn,
+        child: Text(
+          currentCharacter,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.tajawal(
+            fontSize: 24,
+            fontWeight: FontWeight.w900,
+            color: accent,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulsingAvatar
+    extends StatefulWidget {
   const _PulsingAvatar();
 
   @override
-  State<_PulsingAvatar> createState() => _PulsingAvatarState();
+  State<_PulsingAvatar> createState() =>
+      _PulsingAvatarState();
 }
 
-class _PulsingAvatarState extends State<_PulsingAvatar>
+class _PulsingAvatarState
+    extends State<_PulsingAvatar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
+  late final AnimationController
+      _pulseController;
 
-  static const Color _accent = Color(0xFF18C7DE);
+  static const Color _accent =
+      Color(0xFF18C7DE);
 
   @override
   void initState() {
     super.initState();
 
-    _pulseController = AnimationController(
+    _pulseController =
+        AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration:
+          const Duration(seconds: 2),
     )..repeat();
   }
 
@@ -223,27 +357,40 @@ class _PulsingAvatarState extends State<_PulsingAvatar>
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 160,
-      height: 160,
+      width: 180,
+      height: 180,
       child: Stack(
         alignment: Alignment.center,
         children: [
           AnimatedBuilder(
-            animation: _pulseController,
+            animation:
+                _pulseController,
             builder: (_, __) {
-              final value = _pulseController.value;
+              final value =
+                  _pulseController.value;
 
               return Opacity(
-                opacity: (1 - value).clamp(0.0, 1.0),
-                child: Transform.scale(
-                  scale: 1.0 + (value * 0.3),
+                opacity:
+                    (1 - value)
+                        .clamp(0.0, 1.0),
+                child:
+                    Transform.scale(
+                  scale:
+                      1.0 +
+                          (value * 0.3),
                   child: Container(
-                    width: 144,
-                    height: 144,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _accent.withOpacity(0.4),
+                    width: 164,
+                    height: 164,
+                    decoration:
+                        BoxDecoration(
+                      shape:
+                          BoxShape.circle,
+                      border:
+                          Border.all(
+                        color: _accent
+                            .withOpacity(
+                          0.4,
+                        ),
                         width: 2,
                       ),
                     ),
@@ -253,21 +400,33 @@ class _PulsingAvatarState extends State<_PulsingAvatar>
             },
           ),
           Container(
-            width: 144,
-            height: 144,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.cardDark,
-              border: Border.all(
+            width: 164,
+            height: 164,
+            padding:
+                const EdgeInsets.all(4),
+            decoration:
+                BoxDecoration(
+              shape:
+                  BoxShape.circle,
+              color:
+                  AppColors.cardDark,
+              border:
+                  Border.all(
                 color: _accent,
                 width: 4,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black
+                      .withOpacity(
+                    0.4,
+                  ),
                   blurRadius: 20,
-                  offset: const Offset(0, 8),
+                  offset:
+                      const Offset(
+                    0,
+                    8,
+                  ),
                 ),
               ],
             ),
