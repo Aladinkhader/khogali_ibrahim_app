@@ -79,7 +79,9 @@ class ArchiveService {
         .timeout(_requestTimeout);
 
     if (response.statusCode != 200) {
-      throw Exception('تعذر تحميل صفحة الصوتيات: HTTP ${response.statusCode}');
+      throw Exception(
+        'تعذر تحميل صفحة الصوتيات: HTTP ${response.statusCode}',
+      );
     }
 
     final html = utf8.decode(response.bodyBytes);
@@ -160,7 +162,9 @@ class ArchiveService {
 
     final entries = sectionsMap.entries.toList();
 
-    for (var start = 0; start < entries.length; start += _parallelRequests) {
+    for (var start = 0;
+        start < entries.length;
+        start += _parallelRequests) {
       final end = (start + _parallelRequests < entries.length)
           ? start + _parallelRequests
           : entries.length;
@@ -267,7 +271,7 @@ class ArchiveService {
 
     // الموقع يضع روابط التحميل الفعلية للصوتيات على Archive.org.
     final archiveRegex = RegExp(
-      r'''(?:https?:)?\/\/(?:www\.)?archive\.org\/download\/[^"'\s<>]+''',
+      r'''(?:https?:)?\/\/(?:www\.)?archive\.org\/download\/[^"'\\s<>]+''',
       caseSensitive: false,
     );
 
@@ -352,9 +356,10 @@ class ArchiveService {
       return 'الدرس ${numberMatch.group(1)}';
     }
 
-    final arabicNumberMatch =
-        RegExp(r'^\s*الدرس[\s_-]*(\d+)\s*$', caseSensitive: false)
-            .firstMatch(name);
+    final arabicNumberMatch = RegExp(
+      r'^\s*الدرس[\s_-]*(\d+)\s*$',
+      caseSensitive: false,
+    ).firstMatch(name);
 
     if (arabicNumberMatch != null) {
       return 'الدرس ${arabicNumberMatch.group(1)}';
@@ -411,12 +416,18 @@ class ArchiveService {
         .trim();
 
     result = result.replaceAll(
-      RegExp(r'\s*[-–—]?\s*144[0-9]\s*هـ?\s*$', caseSensitive: false),
+      RegExp(
+        r'\s*[-–—]?\s*144[0-9]\s*هـ?\s*$',
+        caseSensitive: false,
+      ),
       '',
     );
 
     result = result.replaceAll(
-      RegExp(r'\s*[-–—]?\s*\d{3,4}\s*هـ?\s*$', caseSensitive: false),
+      RegExp(
+        r'\s*[-–—]?\s*\d{3,4}\s*هـ?\s*$',
+        caseSensitive: false,
+      ),
       '',
     );
 
@@ -461,7 +472,10 @@ class ArchiveService {
     }
 
     if (value.startsWith('http://')) {
-      return value.replaceFirst('http://', 'https://');
+      return value.replaceFirst(
+        'http://',
+        'https://',
+      );
     }
 
     if (value.startsWith('https://')) {
@@ -475,16 +489,25 @@ class ArchiveService {
     var text = value;
 
     text = text.replaceAll(
-      RegExp(r'<script[\s\S]*?<\/script>', caseSensitive: false),
+      RegExp(
+        r'<script[\s\S]*?<\/script>',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
     text = text.replaceAll(
-      RegExp(r'<style[\s\S]*?<\/style>', caseSensitive: false),
+      RegExp(
+        r'<style[\s\S]*?<\/style>',
+        caseSensitive: false,
+      ),
       ' ',
     );
 
-    text = text.replaceAll(RegExp(r'<[^>]+>'), ' ');
+    text = text.replaceAll(
+      RegExp(r'<[^>]+>'),
+      ' ',
+    );
 
     text = text
         .replaceAll('&nbsp;', ' ')
@@ -495,7 +518,12 @@ class ArchiveService {
         .replaceAll('&lt;', '<')
         .replaceAll('&gt;', '>');
 
-    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    text = text
+        .replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        )
+        .trim();
 
     return text;
   }
@@ -519,7 +547,9 @@ class ArchiveService {
         return '';
       }
 
-      return Uri.decodeComponent(uri.pathSegments.last);
+      return Uri.decodeComponent(
+        uri.pathSegments.last,
+      );
     } catch (_) {
       return '';
     }
@@ -553,7 +583,8 @@ class ArchiveService {
           )
           .where(
             (lecture) =>
-                lecture.title.isNotEmpty && lecture.audioUrl.isNotEmpty,
+                lecture.title.isNotEmpty &&
+                lecture.audioUrl.isNotEmpty,
           )
           .toList();
     } catch (_) {
@@ -561,7 +592,9 @@ class ArchiveService {
     }
   }
 
-  static Future<void> _writeCache(List<Lecture> lectures) async {
+  static Future<void> _writeCache(
+    List<Lecture> lectures,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
@@ -578,7 +611,10 @@ class ArchiveService {
             .toList(),
       );
 
-      await prefs.setString(_cacheKey, raw);
+      await prefs.setString(
+        _cacheKey,
+        raw,
+      );
     } catch (_) {}
   }
 
@@ -586,7 +622,9 @@ class ArchiveService {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      final raw = prefs.getString('${_cacheKey}_sections');
+      final raw = prefs.getString(
+        '${_cacheKey}_sections',
+      );
 
       if (raw == null || raw.isEmpty) {
         return null;
@@ -624,11 +662,13 @@ class ArchiveService {
 
   /// يقرأ Cache المحاضرات الخاصة بكل قسم.
   static Future<Map<String, List<Lecture>>>
-      _readSectionLecturesCache() async {
+      _readAllSectionLecturesCache() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      final raw = prefs.getString(_sectionLecturesCacheKey);
+      final raw = prefs.getString(
+        _sectionLecturesCacheKey,
+      );
 
       if (raw == null || raw.isEmpty) {
         return {};
@@ -681,7 +721,7 @@ class ArchiveService {
   static Future<List<Lecture>?> _readSectionLecturesCache(
     String identifier,
   ) async {
-    final cache = await _readSectionLecturesCache();
+    final cache = await _readAllSectionLecturesCache();
 
     return cache[identifier];
   }
@@ -694,7 +734,7 @@ class ArchiveService {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      final cache = await _readSectionLecturesCache();
+      final cache = await _readAllSectionLecturesCache();
 
       cache[identifier] = lectures;
 
@@ -818,7 +858,9 @@ class _SectionFetchResult {
     this.error,
   });
 
-  factory _SectionFetchResult.success(List<Lecture> lectures) {
+  factory _SectionFetchResult.success(
+    List<Lecture> lectures,
+  ) {
     return _SectionFetchResult(
       lectures: lectures,
     );
