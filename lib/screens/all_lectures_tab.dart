@@ -110,7 +110,7 @@ class _AllLecturesTabState
         16,
         12,
         16,
-        100,
+        16,
       ),
       child: Column(
         crossAxisAlignment:
