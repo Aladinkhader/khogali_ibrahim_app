@@ -278,7 +278,7 @@ class _SectionLecturesScreenState
 
     return ListView.builder(
       padding:
-          const EdgeInsets.only(bottom: 90),
+          const EdgeInsets.only(bottom: 16),
       itemCount: _filteredLectures.length,
       itemBuilder: (context, index) {
         final lecture =
