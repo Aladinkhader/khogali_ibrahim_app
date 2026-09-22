@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _shimmerController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 1800),
     );
 
     _controller.forward();
@@ -74,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     Future.delayed(
-      const Duration(milliseconds: 850),
+      const Duration(milliseconds: 900),
       () {
         if (mounted) {
           _shimmerController.repeat();
@@ -82,10 +82,6 @@ class _SplashScreenState extends State<SplashScreen>
       },
     );
 
-    /*
-     * نترك وقتًا كافيًا للمستخدم لقراءة الاسم
-     * بعد اكتمال ظهوره.
-     */
     Future.delayed(
       const Duration(milliseconds: 5200),
       () {
@@ -165,62 +161,11 @@ class _SplashScreenState extends State<SplashScreen>
                         visibleCount,
                       );
 
-                      /*
-                       * الضوء يتحرك مع الحرف الجاري ظهوره.
-                       *
-                       * بعد أن يظهر الحرف:
-                       * يبقى أبيض.
-                       *
-                       * السماوي يظهر فقط حول
-                       * منطقة الحرف الجديد.
-                       */
-                      final currentPosition =
-                          progress *
-                              _title.length;
-
-                      return Stack(
-                        alignment:
-                            Alignment.center,
-                        children: [
-                          /*
-                           * النص الأساسي:
-                           * كل الحروف التي ظهرت
-                           * لونها أبيض دائمًا.
-                           */
-                          Text(
-                            visibleText,
-                            textAlign:
-                                TextAlign.center,
-                            style:
-                                GoogleFonts.tajawal(
-                              fontSize: 24,
-                              fontWeight:
-                                  FontWeight.w900,
-                              color:
-                                  AppColors.mainText,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-
-                          /*
-                           * طبقة الضوء السماوي.
-                           *
-                           * تظهر فقط أثناء دخول
-                           * الحرف الجديد، وليس على
-                           * كامل الكلمة.
-                           */
-                          if (visibleCount <
-                              _title.length)
-                            _ShimmerCharacter(
-                              title: _title,
-                              visibleCount:
-                                  visibleCount,
-                              progress:
-                                  currentPosition -
-                                      visibleCount,
-                              accent: _accent,
-                            ),
-                        ],
+                      return _ShimmerText(
+                        text: visibleText,
+                        shimmerProgress:
+                            _shimmerController.value,
+                        accent: _accent,
                       );
                     },
                   ),
@@ -234,92 +179,134 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class _ShimmerCharacter
-    extends StatelessWidget {
-  final String title;
-  final int visibleCount;
-  final double progress;
+class _ShimmerText extends StatelessWidget {
+  final String text;
+  final double shimmerProgress;
   final Color accent;
 
-  const _ShimmerCharacter({
-    required this.title,
-    required this.visibleCount,
-    required this.progress,
+  const _ShimmerText({
+    required this.text,
+    required this.shimmerProgress,
     required this.accent,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (visibleCount >= title.length) {
+    if (text.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    /*
-     * الحرف الحالي.
-     */
-    final currentCharacter =
-        title[visibleCount];
+    const textStyle = TextStyle(
+      fontSize: 24,
+      fontWeight: FontWeight.w900,
+      color: AppColors.mainText,
+      letterSpacing: 0.5,
+    );
 
-    /*
-     * إذا كان الحرف مسافة،
-     * لا نعرض ضوءًا عليها.
-     */
-    if (currentCharacter == ' ') {
-      return const SizedBox.shrink();
-    }
-
-    return IgnorePointer(
-      child: ShaderMask(
-        shaderCallback: (bounds) {
-          /*
-           * الضوء يمر من اليمين إلى اليسار
-           * داخل الحرف الحالي.
-           */
-          final position =
-              progress.clamp(0.0, 1.0);
-
-          return LinearGradient(
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [
-              accent.withOpacity(0.0),
-              accent,
-              accent.withOpacity(0.0),
-            ],
-            stops: [
-              (position - 0.35)
-                  .clamp(0.0, 1.0),
-              position.clamp(0.0, 1.0),
-              (position + 0.35)
-                  .clamp(0.0, 1.0),
-            ],
-          ).createShader(
-            Rect.fromLTWH(
-              bounds.left,
-              bounds.top,
-              bounds.width,
-              bounds.height,
-            ),
-          );
-        },
-        blendMode: BlendMode.srcIn,
-        child: Text(
-          currentCharacter,
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // النص الأساسي يبقى أبيض دائمًا.
+        Text(
+          text,
           textAlign: TextAlign.center,
           style: GoogleFonts.tajawal(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: accent,
-            letterSpacing: 0.5,
+            fontSize: textStyle.fontSize,
+            fontWeight: textStyle.fontWeight,
+            color: AppColors.mainText,
+            letterSpacing: textStyle.letterSpacing,
           ),
         ),
-      ),
+
+        // الضوء يمر فوق النص كاملًا.
+        IgnorePointer(
+          child: ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: (bounds) {
+              final center =
+                  -0.35 +
+                  (shimmerProgress * 1.7);
+
+              const width = 0.16;
+
+              final start =
+                  (center - width).clamp(
+                -1.0,
+                1.0,
+              );
+
+              final end =
+                  (center + width).clamp(
+                -1.0,
+                1.0,
+              );
+
+              final leftFade =
+                  (center - width * 2.2)
+                      .clamp(-1.0, 1.0);
+
+              final rightFade =
+                  (center + width * 2.2)
+                      .clamp(-1.0, 1.0);
+
+              return LinearGradient(
+                begin: Alignment.centerRight,
+                end: Alignment.centerLeft,
+                colors: [
+                  Colors.transparent,
+                  Colors.transparent,
+                  accent.withOpacity(0.15),
+                  accent.withOpacity(0.95),
+                  accent,
+                  accent.withOpacity(0.95),
+                  accent.withOpacity(0.15),
+                  Colors.transparent,
+                  Colors.transparent,
+                ],
+                stops: [
+                  0.0,
+                  ((leftFade + 1) / 2)
+                      .clamp(0.0, 1.0),
+                  ((center -
+                              width * 1.4 +
+                              1) /
+                          2)
+                      .clamp(0.0, 1.0),
+                  ((start + 1) / 2)
+                      .clamp(0.0, 1.0),
+                  ((center + 1) / 2)
+                      .clamp(0.0, 1.0),
+                  ((end + 1) / 2)
+                      .clamp(0.0, 1.0),
+                  ((center +
+                              width * 1.4 +
+                              1) /
+                          2)
+                      .clamp(0.0, 1.0),
+                  ((rightFade + 1) / 2)
+                      .clamp(0.0, 1.0),
+                  1.0,
+                ],
+              ).createShader(bounds);
+            },
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.tajawal(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: accent,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _PulsingAvatar
-    extends StatefulWidget {
+class _PulsingAvatar extends StatefulWidget {
   const _PulsingAvatar();
 
   @override
@@ -363,8 +350,7 @@ class _PulsingAvatarState
         alignment: Alignment.center,
         children: [
           AnimatedBuilder(
-            animation:
-                _pulseController,
+            animation: _pulseController,
             builder: (_, __) {
               final value =
                   _pulseController.value;
@@ -373,24 +359,18 @@ class _PulsingAvatarState
                 opacity:
                     (1 - value)
                         .clamp(0.0, 1.0),
-                child:
-                    Transform.scale(
+                child: Transform.scale(
                   scale:
-                      1.0 +
-                          (value * 0.3),
+                      1.0 + (value * 0.3),
                   child: Container(
                     width: 164,
                     height: 164,
                     decoration:
                         BoxDecoration(
-                      shape:
-                          BoxShape.circle,
-                      border:
-                          Border.all(
+                      shape: BoxShape.circle,
+                      border: Border.all(
                         color: _accent
-                            .withOpacity(
-                          0.4,
-                        ),
+                            .withOpacity(0.4),
                         width: 2,
                       ),
                     ),
@@ -404,29 +384,20 @@ class _PulsingAvatarState
             height: 164,
             padding:
                 const EdgeInsets.all(4),
-            decoration:
-                BoxDecoration(
-              shape:
-                  BoxShape.circle,
-              color:
-                  AppColors.cardDark,
-              border:
-                  Border.all(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.cardDark,
+              border: Border.all(
                 color: _accent,
                 width: 4,
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black
-                      .withOpacity(
-                    0.4,
-                  ),
+                      .withOpacity(0.4),
                   blurRadius: 20,
                   offset:
-                      const Offset(
-                    0,
-                    8,
-                  ),
+                      const Offset(0, 8),
                 ),
               ],
             ),
