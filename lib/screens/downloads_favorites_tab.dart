@@ -143,7 +143,7 @@ class _DownloadsList extends StatelessWidget {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           itemCount: downloads.length,
           itemBuilder: (context, index) {
             final item = downloads[index];
@@ -298,7 +298,7 @@ class _FavoritesList extends StatelessWidget {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           itemCount: favorites.length,
           itemBuilder: (context, index) {
             final lecture = favorites[index];
