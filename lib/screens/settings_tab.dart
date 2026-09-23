@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
 import '../services/favorites_service.dart';
@@ -66,33 +65,6 @@ class _SettingsTabState extends State<SettingsTab> {
       'شارك التطبيق مع من تحب.',
       subject: 'تطبيق الشيخ أبو الحسن خوجلي إبراهيم',
     );
-  }
-
-  Future<void> _openSocialLink(String url) async {
-    final uri = Uri.parse(url);
-
-    try {
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-
-      if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذر فتح الرابط'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذر فتح الرابط'),
-        ),
-      );
-    }
   }
 
   @override
@@ -276,17 +248,11 @@ class _SettingsTabState extends State<SettingsTab> {
                   _SocialButton(
                     icon: Icons.chat,
                     color: const Color(0xFF25D366),
-                    onTap: () => _openSocialLink(
-                      'https://wa.me/message/YK3PTTIVY4IOP1',
-                    ),
                   ),
                   const SizedBox(width: 18),
                   _SocialButton(
                     icon: Icons.facebook,
                     color: const Color(0xFF1877F2),
-                    onTap: () => _openSocialLink(
-                      'https://www.facebook.com/profile.php?id=100065331340861',
-                    ),
                   ),
                 ],
               ),
@@ -365,7 +331,7 @@ class _SettingsItemState extends State<_SettingsItem> {
                 widget.title,
                 style: const TextStyle(
                   color: AppColors.mainText,
-                  fontSize: 17,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -429,33 +395,28 @@ class _StatCard extends StatelessWidget {
 class _SocialButton extends StatelessWidget {
   final IconData icon;
   final Color color;
-  final VoidCallback onTap;
 
   const _SocialButton({
     required this.icon,
     required this.color,
-    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: color.withOpacity(0.1),
-          border: Border.all(
-            color: color.withOpacity(0.4),
-          ),
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withOpacity(0.1),
+        border: Border.all(
+          color: color.withOpacity(0.4),
         ),
-        child: Icon(
-          icon,
-          color: color,
-          size: 24,
-        ),
+      ),
+      child: Icon(
+        icon,
+        color: color,
+        size: 24,
       ),
     );
   }
