@@ -365,7 +365,7 @@ class _SettingsItemState extends State<_SettingsItem> {
                 widget.title,
                 style: const TextStyle(
                   color: AppColors.mainText,
-                  fontSize: 14,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                 ),
               ),
