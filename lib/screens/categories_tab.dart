@@ -29,6 +29,15 @@ class _CategoriesTabState extends State<CategoriesTab> {
     });
   }
 
+  /// يجلب السلاسل مباشرة من صفحة الصوتيات.
+  ///
+  /// لا يوجد هنا نظام:
+  ///
+  /// قسم رئيسي
+  /// ↓
+  /// تصنيفات فرعية
+  ///
+  /// كل سلسلة تظهر مباشرة في الشاشة.
   Future<Map<String, String>> _loadSections({
     bool forceRefresh = false,
   }) async {
@@ -47,6 +56,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
         continue;
       }
 
+      // المحاضرات محذوفة من التطبيق.
       if (_normalizeTitle(title) == 'المحاضرات') {
         continue;
       }
@@ -116,6 +126,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
       result,
     );
 
+    // إزالة السنة الهجرية في نهاية الاسم.
     result = result.replaceAll(
       RegExp(
         r'\s*[-–—]?\s*(1[34]\d{2})\s*هـ?\s*$',
@@ -124,6 +135,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
       '',
     );
 
+    // إزالة الأشهر الهجرية من نهاية الاسم.
     const months = [
       'محرم',
       'صفر',
@@ -157,6 +169,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
       );
     }
 
+    // إزالة السنة مرة أخرى إذا ظهرت بعد إزالة الشهر.
     result = result.replaceAll(
       RegExp(
         r'\s*[-–—]?\s*(1[34]\d{2})\s*هـ?\s*$',
@@ -415,9 +428,9 @@ class _CategoryCardDesign
                             TextAlign.center,
                         style:
                             const TextStyle(
-                          fontSize: 21,
+                          fontSize: 18,
                           fontWeight:
-                              FontWeight.w900,
+                              FontWeight.w800,
                           color: AppColors
                               .mainText,
                         ),
