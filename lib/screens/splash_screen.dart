@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../theme/app_colors.dart';
 import 'main_shell.dart';
+import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _textController;
   late final AnimationController _shimmerController;
 
-  static const Color _accent = Color(0xFF18C7DE);
+  static const Color _accent = AppColors.primaryTeal;
 
   static const String _title = 'الشيخ أبو الحسن خوجلي إبراهيم';
 
@@ -86,23 +89,37 @@ class _SplashScreenState extends State<SplashScreen>
       const Duration(milliseconds: 5200),
       () {
         if (mounted) {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              transitionDuration:
-                  const Duration(milliseconds: 650),
-              pageBuilder: (_, anim, __) =>
-                  const MainShell(),
-              transitionsBuilder:
-                  (_, anim, __, child) {
-                return FadeTransition(
-                  opacity: anim,
-                  child: child,
-                );
-              },
-            ),
-          );
+          _openNextScreen();
         }
       },
+    );
+  }
+
+  Future<void> _openNextScreen() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final bool onboardingCompleted = prefs.getBool(
+          'khogali_onboarding_completed',
+        ) ??
+        false;
+
+    if (!mounted) return;
+
+    final Widget nextScreen = onboardingCompleted
+        ? const MainShell()
+        : const OnboardingScreen();
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 650),
+        pageBuilder: (_, animation, __) => nextScreen,
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
     );
   }
 
@@ -117,8 +134,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          AppColors.veryDarkBackground,
+      backgroundColor: AppColors.veryDarkBackground,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnim,
@@ -132,8 +148,7 @@ class _SplashScreenState extends State<SplashScreen>
                 const SizedBox(height: 28),
 
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 24,
                   ),
                   child: AnimatedBuilder(
@@ -141,30 +156,21 @@ class _SplashScreenState extends State<SplashScreen>
                       _textController,
                       _shimmerController,
                     ]),
-                    builder:
-                        (context, child) {
-                      final progress =
-                          _textController.value;
+                    builder: (context, child) {
+                      final double progress = _textController.value;
 
-                      final visibleCount =
-                          (progress *
-                                  _title.length)
-                              .floor()
-                              .clamp(
-                                0,
-                                _title.length,
-                              );
+                      final int visibleCount = (progress * _title.length)
+                          .floor()
+                          .clamp(0, _title.length);
 
-                      final visibleText =
-                          _title.substring(
+                      final String visibleText = _title.substring(
                         0,
                         visibleCount,
                       );
 
                       return _ShimmerText(
                         text: visibleText,
-                        shimmerProgress:
-                            _shimmerController.value,
+                        shimmerProgress: _shimmerController.value,
                         accent: _accent,
                       );
                     },
@@ -196,7 +202,7 @@ class _ShimmerText extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    const textStyle = TextStyle(
+    const TextStyle textStyle = TextStyle(
       fontSize: 24,
       fontWeight: FontWeight.w900,
       color: AppColors.mainText,
@@ -206,7 +212,6 @@ class _ShimmerText extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        // النص الأساسي يبقى أبيض دائمًا.
         Text(
           text,
           textAlign: TextAlign.center,
@@ -217,37 +222,23 @@ class _ShimmerText extends StatelessWidget {
             letterSpacing: textStyle.letterSpacing,
           ),
         ),
-
-        // الضوء يمر فوق النص كاملًا.
         IgnorePointer(
           child: ShaderMask(
             blendMode: BlendMode.srcIn,
             shaderCallback: (bounds) {
-              final center =
-                  -0.35 +
-                  (shimmerProgress * 1.7);
+              final double center = -0.35 + (shimmerProgress * 1.7);
 
-              const width = 0.16;
+              const double width = 0.16;
 
-              final start =
-                  (center - width).clamp(
-                -1.0,
-                1.0,
-              );
+              final double start = (center - width).clamp(-1.0, 1.0);
 
-              final end =
-                  (center + width).clamp(
-                -1.0,
-                1.0,
-              );
+              final double end = (center + width).clamp(-1.0, 1.0);
 
-              final leftFade =
-                  (center - width * 2.2)
-                      .clamp(-1.0, 1.0);
+              final double leftFade =
+                  (center - width * 2.2).clamp(-1.0, 1.0);
 
-              final rightFade =
-                  (center + width * 2.2)
-                      .clamp(-1.0, 1.0);
+              final double rightFade =
+                  (center + width * 2.2).clamp(-1.0, 1.0);
 
               return LinearGradient(
                 begin: Alignment.centerRight,
@@ -265,26 +256,13 @@ class _ShimmerText extends StatelessWidget {
                 ],
                 stops: [
                   0.0,
-                  ((leftFade + 1) / 2)
-                      .clamp(0.0, 1.0),
-                  ((center -
-                              width * 1.4 +
-                              1) /
-                          2)
-                      .clamp(0.0, 1.0),
-                  ((start + 1) / 2)
-                      .clamp(0.0, 1.0),
-                  ((center + 1) / 2)
-                      .clamp(0.0, 1.0),
-                  ((end + 1) / 2)
-                      .clamp(0.0, 1.0),
-                  ((center +
-                              width * 1.4 +
-                              1) /
-                          2)
-                      .clamp(0.0, 1.0),
-                  ((rightFade + 1) / 2)
-                      .clamp(0.0, 1.0),
+                  ((leftFade + 1) / 2).clamp(0.0, 1.0),
+                  ((center - width * 1.4 + 1) / 2).clamp(0.0, 1.0),
+                  ((start + 1) / 2).clamp(0.0, 1.0),
+                  ((center + 1) / 2).clamp(0.0, 1.0),
+                  ((end + 1) / 2).clamp(0.0, 1.0),
+                  ((center + width * 1.4 + 1) / 2).clamp(0.0, 1.0),
+                  ((rightFade + 1) / 2).clamp(0.0, 1.0),
                   1.0,
                 ],
               ).createShader(bounds);
@@ -310,28 +288,22 @@ class _PulsingAvatar extends StatefulWidget {
   const _PulsingAvatar();
 
   @override
-  State<_PulsingAvatar> createState() =>
-      _PulsingAvatarState();
+  State<_PulsingAvatar> createState() => _PulsingAvatarState();
 }
 
-class _PulsingAvatarState
-    extends State<_PulsingAvatar>
+class _PulsingAvatarState extends State<_PulsingAvatar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController
-      _pulseController;
+  late final AnimationController _pulseController;
 
-  static const Color _accent =
-      Color(0xFF18C7DE);
+  static const Color _accent = AppColors.primaryTeal;
 
   @override
   void initState() {
     super.initState();
 
-    _pulseController =
-        AnimationController(
+    _pulseController = AnimationController(
       vsync: this,
-      duration:
-          const Duration(seconds: 2),
+      duration: const Duration(seconds: 2),
     )..repeat();
   }
 
@@ -352,25 +324,19 @@ class _PulsingAvatarState
           AnimatedBuilder(
             animation: _pulseController,
             builder: (_, __) {
-              final value =
-                  _pulseController.value;
+              final double value = _pulseController.value;
 
               return Opacity(
-                opacity:
-                    (1 - value)
-                        .clamp(0.0, 1.0),
+                opacity: (1 - value).clamp(0.0, 1.0),
                 child: Transform.scale(
-                  scale:
-                      1.0 + (value * 0.3),
+                  scale: 1.0 + (value * 0.3),
                   child: Container(
                     width: 164,
                     height: 164,
-                    decoration:
-                        BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: _accent
-                            .withOpacity(0.4),
+                        color: _accent.withOpacity(0.4),
                         width: 2,
                       ),
                     ),
@@ -382,8 +348,7 @@ class _PulsingAvatarState
           Container(
             width: 164,
             height: 164,
-            padding:
-                const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AppColors.cardDark,
@@ -393,11 +358,9 @@ class _PulsingAvatarState
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black
-                      .withOpacity(0.4),
+                  color: Colors.black.withOpacity(0.4),
                   blurRadius: 20,
-                  offset:
-                      const Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
