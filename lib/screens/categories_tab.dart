@@ -15,6 +15,14 @@ class CategoriesTab extends StatefulWidget {
 class _CategoriesTabState extends State<CategoriesTab> {
   late Future<Map<String, String>> _sectionsFuture;
 
+  static const List<String> _preferredOrder = [
+    'العقيدة الطحاوية',
+    'الواسطية',
+    'نخبة الفكر',
+    'الرحبية',
+    'القواعد المثلى',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -29,15 +37,6 @@ class _CategoriesTabState extends State<CategoriesTab> {
     });
   }
 
-  /// يجلب السلاسل مباشرة من صفحة الصوتيات.
-  ///
-  /// لا يوجد هنا نظام:
-  ///
-  /// قسم رئيسي
-  /// ↓
-  /// تصنيفات فرعية
-  ///
-  /// كل سلسلة تظهر مباشرة في الشاشة.
   Future<Map<String, String>> _loadSections({
     bool forceRefresh = false,
   }) async {
@@ -45,24 +44,21 @@ class _CategoriesTabState extends State<CategoriesTab> {
       forceRefresh: forceRefresh,
     );
 
-    final Map<String, String> result = {};
+    final Map<String, String> cleaned = {};
 
     for (final entry in sections.entries) {
-      final title = _cleanSectionTitle(
-        entry.value,
-      );
+      final title = _cleanSectionTitle(entry.value);
 
       if (title.isEmpty) {
         continue;
       }
 
-      // المحاضرات محذوفة من التطبيق.
       if (_normalizeTitle(title) == 'المحاضرات') {
         continue;
       }
 
       final existingKey = _findSameTitleKey(
-        result,
+        cleaned,
         title,
       );
 
@@ -70,25 +66,98 @@ class _CategoriesTabState extends State<CategoriesTab> {
         continue;
       }
 
-      result[entry.key] = title;
+      cleaned[entry.key] = title;
     }
 
-    return result;
+    if (cleaned.isEmpty) {
+      return cleaned;
+    }
+
+    final entries = cleaned.entries.toList();
+
+    final results = await Future.wait(
+      entries.map(
+        (entry) async {
+          try {
+            final lectures = await ArchiveService.fetchSectionLectures(
+              entry.key,
+              entry.value,
+            );
+
+            return _SectionStatus(
+              identifier: entry.key,
+              title: entry.value,
+              hasLectures: lectures.isNotEmpty,
+            );
+          } catch (_) {
+            return _SectionStatus(
+              identifier: entry.key,
+              title: entry.value,
+              hasLectures: false,
+            );
+          }
+        },
+      ),
+    );
+
+    final withLectures = results
+        .where((item) => item.hasLectures)
+        .toList();
+
+    final withoutLectures = results
+        .where((item) => !item.hasLectures)
+        .toList();
+
+    withLectures.sort(_compareSections);
+    withoutLectures.sort(_compareSections);
+
+    final Map<String, String> ordered = {};
+
+    for (final item in withLectures) {
+      ordered[item.identifier] = item.title;
+    }
+
+    for (final item in withoutLectures) {
+      ordered[item.identifier] = item.title;
+    }
+
+    return ordered;
+  }
+
+  int _compareSections(
+    _SectionStatus a,
+    _SectionStatus b,
+  ) {
+    final indexA = _preferredIndex(a.title);
+    final indexB = _preferredIndex(b.title);
+
+    if (indexA != indexB) {
+      return indexA.compareTo(indexB);
+    }
+
+    return 0;
+  }
+
+  int _preferredIndex(String title) {
+    final normalized = _normalizeTitle(title);
+
+    for (var i = 0; i < _preferredOrder.length; i++) {
+      if (_normalizeTitle(_preferredOrder[i]) == normalized) {
+        return i;
+      }
+    }
+
+    return _preferredOrder.length;
   }
 
   String? _findSameTitleKey(
     Map<String, String> map,
     String title,
   ) {
-    final normalized = _normalizeTitle(
-      title,
-    );
+    final normalized = _normalizeTitle(title);
 
     for (final entry in map.entries) {
-      if (_normalizeTitle(
-            entry.value,
-          ) ==
-          normalized) {
+      if (_normalizeTitle(entry.value) == normalized) {
         return entry.key;
       }
     }
@@ -96,37 +165,25 @@ class _CategoriesTabState extends State<CategoriesTab> {
     return null;
   }
 
-  String _normalizeTitle(
-    String title,
-  ) {
+  String _normalizeTitle(String title) {
     return title
-        .replaceAll(
-          RegExp(r'\s+'),
-          ' ',
-        )
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll('ـ', '')
         .trim()
         .toLowerCase();
   }
 
-  String _cleanSectionTitle(
-    String title,
-  ) {
+  String _cleanSectionTitle(String title) {
     var result = title
-        .replaceAll(
-          RegExp(r'\s+'),
-          ' ',
-        )
+        .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
 
     if (result.isEmpty) {
       return '';
     }
 
-    result = _normalizeArabicDigits(
-      result,
-    );
+    result = _normalizeArabicDigits(result);
 
-    // إزالة السنة الهجرية في نهاية الاسم.
     result = result.replaceAll(
       RegExp(
         r'\s*[-–—]?\s*(1[34]\d{2})\s*هـ?\s*$',
@@ -135,7 +192,6 @@ class _CategoriesTabState extends State<CategoriesTab> {
       '',
     );
 
-    // إزالة الأشهر الهجرية من نهاية الاسم.
     const months = [
       'محرم',
       'صفر',
@@ -158,18 +214,13 @@ class _CategoriesTabState extends State<CategoriesTab> {
     for (final month in months) {
       result = result.replaceAll(
         RegExp(
-          r'\s+' +
-              RegExp.escape(
-                month,
-              ) +
-              r'\s*$',
+          r'\s+' + RegExp.escape(month) + r'\s*$',
           caseSensitive: false,
         ),
         '',
       );
     }
 
-    // إزالة السنة مرة أخرى إذا ظهرت بعد إزالة الشهر.
     result = result.replaceAll(
       RegExp(
         r'\s*[-–—]?\s*(1[34]\d{2})\s*هـ?\s*$',
@@ -181,9 +232,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
     return result.trim();
   }
 
-  String _normalizeArabicDigits(
-    String value,
-  ) {
+  String _normalizeArabicDigits(String value) {
     return value
         .replaceAll('٠', '0')
         .replaceAll('١', '1')
@@ -198,9 +247,7 @@ class _CategoriesTabState extends State<CategoriesTab> {
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         16,
@@ -214,11 +261,10 @@ class _CategoriesTabState extends State<CategoriesTab> {
           context,
           snapshot,
         ) {
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF18C7DE),
+                color: AppColors.primaryTeal,
               ),
             );
           }
@@ -257,6 +303,18 @@ class _CategoriesTabState extends State<CategoriesTab> {
   }
 }
 
+class _SectionStatus {
+  final String identifier;
+  final String title;
+  final bool hasLectures;
+
+  const _SectionStatus({
+    required this.identifier,
+    required this.title,
+    required this.hasLectures,
+  });
+}
+
 class _CategoryCard extends StatefulWidget {
   final String identifier;
   final String title;
@@ -267,12 +325,10 @@ class _CategoryCard extends StatefulWidget {
   });
 
   @override
-  State<_CategoryCard> createState() =>
-      _CategoryCardState();
+  State<_CategoryCard> createState() => _CategoryCardState();
 }
 
-class _CategoryCardState
-    extends State<_CategoryCard> {
+class _CategoryCardState extends State<_CategoryCard> {
   bool _pressed = false;
   bool _opening = false;
 
@@ -288,8 +344,7 @@ class _CategoryCardState
     try {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) =>
-              SectionLecturesScreen(
+          builder: (_) => SectionLecturesScreen(
             identifier: widget.identifier,
             sectionTitle: widget.title,
           ),
@@ -305,9 +360,7 @@ class _CategoryCardState
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTapDown: (_) {
         setState(() {
@@ -334,8 +387,7 @@ class _CategoryCardState
   }
 }
 
-class _CategoryCardDesign
-    extends StatelessWidget {
+class _CategoryCardDesign extends StatelessWidget {
   final String title;
   final bool pressed;
   final bool loading;
@@ -347,61 +399,40 @@ class _CategoryCardDesign
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return AnimatedGlowBorder(
-      borderRadius: BorderRadius.circular(
-        20,
-      ),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedScale(
         scale: pressed ? 1.02 : 1.0,
-        duration: const Duration(
-          milliseconds: 150,
-        ),
+        duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
         child: AnimatedContainer(
-          duration: const Duration(
-            milliseconds: 150,
-          ),
+          duration: const Duration(milliseconds: 150),
           transform: Matrix4.translationValues(
             0,
             pressed ? -4 : 0,
             0,
           ),
-          padding: const EdgeInsets.all(
-            16,
-          ),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient:
-                AppColors.categoryCardGradient,
+            gradient: AppColors.categoryCardGradient,
             boxShadow: pressed
                 ? [
                     BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.4),
+                      color: Colors.black.withOpacity(0.4),
                       blurRadius: 22,
-                      offset: const Offset(
-                        0,
-                        12,
-                      ),
+                      offset: const Offset(0, 12),
                     ),
                     BoxShadow(
-                      color: AppColors
-                          .primaryTeal
-                          .withOpacity(0.3),
+                      color: AppColors.primaryTeal.withOpacity(0.3),
                       blurRadius: 18,
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.2),
+                      color: Colors.black.withOpacity(0.2),
                       blurRadius: 10,
-                      offset: const Offset(
-                        0,
-                        4,
-                      ),
+                      offset: const Offset(0, 4),
                     ),
                   ],
           ),
@@ -410,47 +441,31 @@ class _CategoryCardDesign
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child:
-                        CircularProgressIndicator(
+                    child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(
-                        0xFF18C7DE,
-                      ),
+                      color: AppColors.primaryTeal,
                     ),
                   )
                 : Column(
-                    mainAxisSize:
-                        MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         title,
-                        textAlign:
-                            TextAlign.center,
-                        style:
-                            const TextStyle(
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
                           fontSize: 18,
-                          fontWeight:
-                              FontWeight.w800,
-                          color: AppColors
-                              .mainText,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.mainText,
                         ),
                       ),
-                      const SizedBox(
-                        height: 10,
-                      ),
+                      const SizedBox(height: 10),
                       Text(
                         'عرض المحاضرات',
-                        textAlign:
-                            TextAlign.center,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors
-                              .secondaryText
-                              .withOpacity(
-                            0.8,
-                          ),
-                          fontWeight:
-                              FontWeight.w500,
+                          color: AppColors.secondaryText.withOpacity(0.8),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -470,9 +485,7 @@ class _ErrorState extends StatelessWidget {
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -480,11 +493,9 @@ class _ErrorState extends StatelessWidget {
           const Icon(
             Icons.cloud_off_rounded,
             size: 52,
-            color: Color(0xFF18C7DE),
+            color: AppColors.primaryTeal,
           ),
-          const SizedBox(
-            height: 14,
-          ),
+          const SizedBox(height: 14),
           const Text(
             'تعذر تحميل الأقسام',
             textAlign: TextAlign.center,
@@ -494,43 +505,29 @@ class _ErrorState extends StatelessWidget {
               color: AppColors.mainText,
             ),
           ),
-          const SizedBox(
-            height: 8,
-          ),
+          const SizedBox(height: 8),
           Text(
             'تحقق من اتصال الإنترنت ثم حاول مرة أخرى',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.secondaryText
-                  .withOpacity(0.85),
+              color: AppColors.secondaryText.withOpacity(0.85),
             ),
           ),
-          const SizedBox(
-            height: 18,
-          ),
+          const SizedBox(height: 18),
           ElevatedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
-            label: const Text(
-              'إعادة المحاولة',
-            ),
-            style:
-                ElevatedButton.styleFrom(
-              backgroundColor:
-                  const Color(0xFF18C7DE),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryTeal,
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 12,
               ),
-              shape:
-                  RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
@@ -548,9 +545,7 @@ class _EmptyState extends StatelessWidget {
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -558,11 +553,9 @@ class _EmptyState extends StatelessWidget {
           const Icon(
             Icons.folder_off_rounded,
             size: 52,
-            color: Color(0xFF18C7DE),
+            color: AppColors.primaryTeal,
           ),
-          const SizedBox(
-            height: 14,
-          ),
+          const SizedBox(height: 14),
           const Text(
             'لا توجد أقسام',
             textAlign: TextAlign.center,
@@ -572,31 +565,20 @@ class _EmptyState extends StatelessWidget {
               color: AppColors.mainText,
             ),
           ),
-          const SizedBox(
-            height: 18,
-          ),
+          const SizedBox(height: 18),
           ElevatedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(
-              Icons.refresh_rounded,
-            ),
-            label: const Text(
-              'إعادة المحاولة',
-            ),
-            style:
-                ElevatedButton.styleFrom(
-              backgroundColor:
-                  const Color(0xFF18C7DE),
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryTeal,
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(
+              padding: const EdgeInsets.symmetric(
                 horizontal: 20,
                 vertical: 12,
               ),
-              shape:
-                  RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
