@@ -22,6 +22,16 @@ class ArchiveService {
 
   static const int _parallelRequests = 6;
 
+  // ترتيب الأقسام المطلوب ظهوره في التطبيق.
+  // بقية الأقسام ستظهر بعد ذلك حسب ترتيب الموقع.
+  static const List<String> _preferredSectionOrder = [
+    'العقيدة الطحاوية',
+    'الواسطية',
+    'نخبة الفكر',
+    'الرحبية',
+    'القواعد المثلى',
+  ];
+
   static Future<Map<String, String>> fetchSections({
     bool forceRefresh = false,
   }) async {
@@ -29,8 +39,11 @@ class ArchiveService {
       final cached = await _readSectionsCache();
 
       if (cached != null && cached.isNotEmpty) {
+        final orderedCached = _sortSections(cached);
+
         _refreshSectionsInBackground();
-        return cached;
+
+        return orderedCached;
       }
     }
 
@@ -40,9 +53,11 @@ class ArchiveService {
       throw Exception('لم يتم العثور على الأقسام الصوتية في موقع الشيخ.');
     }
 
-    await _writeSectionsCache(fresh);
+    final orderedFresh = _sortSections(fresh);
 
-    return fresh;
+    await _writeSectionsCache(orderedFresh);
+
+    return orderedFresh;
   }
 
   static Future<void> _refreshSectionsInBackground() async {
@@ -50,7 +65,9 @@ class ArchiveService {
       final fresh = await _fetchSectionsFromWebsite();
 
       if (fresh.isNotEmpty) {
-        await _writeSectionsCache(fresh);
+        final orderedFresh = _sortSections(fresh);
+
+        await _writeSectionsCache(orderedFresh);
       }
     } catch (_) {}
   }
@@ -105,6 +122,52 @@ class ArchiveService {
     }
 
     return result;
+  }
+
+  static Map<String, String> _sortSections(
+    Map<String, String> input,
+  ) {
+    final ordered = <String, String>{};
+    final usedKeys = <String>{};
+
+    for (final preferredTitle in _preferredSectionOrder) {
+      for (final entry in input.entries) {
+        if (usedKeys.contains(entry.key)) {
+          continue;
+        }
+
+        if (_sectionTitlesMatch(entry.value, preferredTitle)) {
+          ordered[entry.key] = entry.value;
+          usedKeys.add(entry.key);
+          break;
+        }
+      }
+    }
+
+    for (final entry in input.entries) {
+      if (!usedKeys.contains(entry.key)) {
+        ordered[entry.key] = entry.value;
+      }
+    }
+
+    return ordered;
+  }
+
+  static bool _sectionTitlesMatch(
+    String actual,
+    String preferred,
+  ) {
+    final normalizedActual = _normalizeSectionTitle(actual);
+    final normalizedPreferred = _normalizeSectionTitle(preferred);
+
+    return normalizedActual == normalizedPreferred;
+  }
+
+  static String _normalizeSectionTitle(String title) {
+    return title
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll('ـ', '')
+        .trim();
   }
 
   static Future<List<Lecture>> fetchAllLectures({
