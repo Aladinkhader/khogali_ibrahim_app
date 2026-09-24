@@ -31,7 +31,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.sheikhapp.temp_scaffold"
+    namespace = "com.khogaliibrahim.app"
     compileSdk = 36
 
     compileOptions {
@@ -54,7 +54,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.sheikhapp.temp_scaffold"
+        applicationId = "com.khogaliibrahim.app"
         minSdk = 21
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
