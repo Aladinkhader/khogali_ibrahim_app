@@ -11,9 +11,7 @@
     <application
         android:label="الشيخ أبو الحسن خوجلي إبراهيم"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"
-        android:requestLegacyExternalStorage="true">
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name="com.ryanheise.audioservice.AudioServiceActivity"
@@ -35,7 +33,6 @@
 
         </activity>
 
-        <!-- خدمة تشغيل الوسائط في الخلفية -->
         <service
             android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"
@@ -48,12 +45,10 @@
 
         </service>
 
-        <!-- أيقونة إشعار مشغل الوسائط -->
         <meta-data
             android:name="com.ryanheise.audioservice.smallIcon"
             android:resource="@drawable/ic_stat_notification"/>
 
-        <!-- استقبال أزرار التحكم بالوسائط -->
         <receiver
             android:name="com.ryanheise.audioservice.MediaButtonReceiver"
             android:exported="true"
