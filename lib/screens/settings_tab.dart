@@ -7,6 +7,7 @@ import '../services/favorites_service.dart';
 import '../services/downloads_service.dart';
 import '../services/archive_service.dart';
 import 'sheikh_bio_dialog.dart';
+import 'onboarding_screen.dart';
 import '../widgets/glow_border.dart';
 
 class SettingsTab extends StatefulWidget {
@@ -95,6 +96,14 @@ class _SettingsTabState extends State<SettingsTab> {
     }
   }
 
+  void _openAppFeatures() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final favoritesService = FavoritesService.instance;
@@ -136,6 +145,16 @@ class _SettingsTabState extends State<SettingsTab> {
             title: 'من هو الشيخ أبو الحسن خوجلي إبراهيم',
             icon: Icons.info_outline,
             onTap: () => showSheikhBioDialog(context),
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        _SettingsCard(
+          child: _SettingsItem(
+            title: 'مميزات التطبيق',
+            icon: Icons.auto_awesome_outlined,
+            onTap: _openAppFeatures,
           ),
         ),
 
