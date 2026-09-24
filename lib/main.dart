@@ -10,31 +10,12 @@ import 'services/downloads_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return Material(
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Text(
-            'خطأ:\n${details.exceptionAsString()}',
-            style: const TextStyle(
-              color: Colors.red,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ),
-    );
-  };
-
   String? initError;
 
   try {
-    // تهيئة MediaSession ومشغل الوسائط في شريط الإشعارات
     await JustAudioBackground.init(
       androidNotificationChannelId:
-          'com.sheikhapp.temp_scaffold.channel.media.v2',
+          'sheikh_khogali_ibrahim.channel.media',
       androidNotificationChannelName:
           'مشغل محاضرات الشيخ أبو الحسن خوجلي إبراهيم',
       androidNotificationChannelDescription:
@@ -47,8 +28,8 @@ Future<void> main() async {
     await FavoritesService.instance.init();
     await DownloadsService.instance.init();
     await AudioPlayerService.instance.init();
-  } catch (e, st) {
-    initError = '$e\n\n$st';
+  } catch (e) {
+    initError = e.toString();
   }
 
   runApp(
@@ -74,14 +55,15 @@ class SheikhApp extends StatelessWidget {
         home: Scaffold(
           backgroundColor: Colors.white,
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
                 child: Text(
-                  'خطأ أثناء بدء التطبيق:\n\n$initError',
+                  'تعذر تشغيل بعض خدمات التطبيق.\nيرجى إعادة تشغيل التطبيق والمحاولة مرة أخرى.',
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.red,
-                    fontSize: 12,
+                    fontSize: 15,
                   ),
                 ),
               ),
