@@ -62,8 +62,8 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
                 storeFile = file(
                     keystoreProperties.getProperty("storeFile")
                 )
